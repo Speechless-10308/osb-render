@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Set, Tuple, List, Union
 import math
 
 from src.models import (
@@ -36,6 +36,7 @@ class StateEngine:
 
         for layer in all_list:
             for obj in layer:
+                obj.commands.sort(key=lambda c: c.start_time)
                 self._compute_object_lifetime(obj)
 
     def _compute_object_lifetime(self, obj: SBObject):
@@ -88,6 +89,30 @@ class StateEngine:
                     p_cmd.start_time = obj.life_start
                     p_cmd.end_time = obj.life_end
 
+    def _get_command_categories(self, cmd_type: str) -> List[str]:
+        """
+        Identify which state properties a command affects.
+        Using categories helps prevent future commands from overwriting
+        past commands if they affect the same property (e.g., M and MX).
+        """
+        if cmd_type == "F":
+            return ["opacity"]
+        if cmd_type == "M":
+            return ["x", "y"]
+        if cmd_type == "MX":
+            return ["x"]
+        if cmd_type == "MY":
+            return ["y"]
+        if cmd_type == "S":
+            return ["scale"]
+        if cmd_type == "V":
+            return ["scale"]
+        if cmd_type == "R":
+            return ["rotation"]
+        if cmd_type == "C":
+            return ["color"]
+        return []
+
     def get_object_state(self, obj: SBObject, time: int) -> ObjectState | None:
         """
         Get the state of the object at a specific time by applying all relevant commands.
@@ -112,6 +137,8 @@ class StateEngine:
     def _process_commands(
         self, commands: List[Union[Command, LoopCommand]], time: int, state: ObjectState
     ):
+
+        processed_categories: Set[str] = set()
         for cmd in commands:
             if isinstance(cmd, LoopCommand):
                 self._process_loop(cmd, time, state)
@@ -119,20 +146,32 @@ class StateEngine:
                 if cmd.type == "P":
                     self._apply_parameter(cmd, state, time)
                     continue
+
+                categories = self._get_command_categories(cmd.type)
+
                 if time < cmd.start_time:
-                    continue  # Command not started yet
-                progress = 0.0
-                if time > cmd.end_time:
-                    progress = 1.0  # Command finished
+                    should_apply_start = False
+                    for cat in categories:
+                        if cat not in processed_categories:
+                            should_apply_start = True
+                            processed_categories.add(cat)
+                    if should_apply_start:
+                        self._apply_command_value(cmd, state, 0.0)
+                elif time > cmd.end_time:
+                    self._apply_command_value(cmd, state, 1.0)
+                    for cat in categories:
+                        processed_categories.add(cat)
                 else:
                     duration = cmd.end_time - cmd.start_time
-                    if duration == 0:
-                        progress = 1.0
-                    else:
+                    progress = 0.0
+                    if duration != 0:
                         normed_time = (time - cmd.start_time) / duration
                         progress = easings.apply_easing(cmd.easing, normed_time)
 
-                self._apply_command_value(cmd, state, progress)
+                    self._apply_command_value(cmd, state, progress)
+
+                    for cat in categories:
+                        processed_categories.add(cat)
 
     def _process_loop(self, loop_cmd: LoopCommand, time: int, state: ObjectState):
         """
@@ -148,8 +187,12 @@ class StateEngine:
         start_abs = loop_cmd.start_time
         end_abs = start_abs + total_duration
 
-        if time < start_abs or time > end_abs:
+        if time < start_abs:
             return  # Outside loop time
+
+        if time > end_abs:
+            self._process_commands(loop_cmd.commands, loop_duration, state)
+            return  # After loop time
 
         elapsed = time - start_abs
         # current_iteration = elapsed // loop_duration # Not used currently

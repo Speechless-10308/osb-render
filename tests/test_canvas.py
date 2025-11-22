@@ -21,14 +21,14 @@ def test_render_frame_pil(times, filepath):
     )
 
     render = StoryboardRenderer(engine, assets_loader, width=1920, height=1080)
-    st = time.time()
+
     img = render.render_frame(times)
-    print(f"Render time: {time.time() - st} seconds")
+
     img.save("test_render_frame_output_pil.png")
 
 
 if __name__ == "__main__":
     test_render_frame_pil(
-        5193,
-        "C:\\MyOtherFiles\\osu!\\Songs\\1054045 a_hisa - Alexithymia _ Lupinus _ Tokei no Heya to Seishin Sekai\\a_hisa - Alexithymia  Lupinus  Tokei no Heya to Seishin Sekai (ProfessionalBox).osb",
+        100617,
+        "C:\\MyOtherFiles\\osu!\\Songs\\2412263 nm-y - Datura Sh__va\\nm-y - Datura Shva (iljaaz).osb",
     )
