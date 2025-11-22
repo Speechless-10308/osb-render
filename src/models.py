@@ -106,7 +106,7 @@ class Sprite(SBObject):
 @dataclass
 class Animation(SBObject):
     frame_count: int = 0
-    frame_delay: float = 0
+    frame_delay: float = 0.0
     loop_type: LoopType = LoopType.LoopForever
 
 

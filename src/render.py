@@ -96,8 +96,8 @@ class StoryboardRenderer:
             dx = ox - cx
             dy = oy - cy
 
-            cos_theta = math.cos(theta)
-            sin_theta = math.sin(theta)
+            cos_theta = math.cos(-theta)
+            sin_theta = math.sin(-theta)
 
             new_dx = dx * cos_theta - dy * sin_theta
             new_dy = dx * sin_theta + dy * cos_theta
@@ -118,13 +118,13 @@ class StoryboardRenderer:
         canvas = Image.new("RGBA", (self.width, self.height), self.background_color)
 
         for layer in self.layers:
-            for obj in layer:
+            for idx, obj in enumerate(layer):
                 state = self.engine.get_object_state(obj, time_ms)
 
                 if not state or not state.visible:
                     continue  # Object is invisible at this time
 
-                img = self.asset_loader.load_image(state.image_path)
+                img = self.asset_loader.load_image(state.image_path, method="pil")
 
                 if img == self.asset_loader.placeholder:
                     continue  # Image not found
@@ -132,6 +132,7 @@ class StoryboardRenderer:
                 transformed_img, pos_x, pos_y = self._apply_transform(
                     img, state, obj.origin
                 )
+
                 if transformed_img is None:
                     continue  # Invisible due to zero scale
 

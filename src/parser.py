@@ -84,7 +84,7 @@ class StoryboardParser:
                 )
             elif object_type == "Animation":
                 frame_count = int(parts[6].strip())
-                frame_delay = int(parts[7].strip())
+                frame_delay = float(parts[7].strip())
                 loop_type = LoopType.LoopForever
                 if len(parts) > 8:
                     # Optional loop type

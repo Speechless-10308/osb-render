@@ -43,14 +43,18 @@ class StateEngine:
         max_t = float("-inf")
 
         has_commands = False
+        p_command_indices = []
 
-        for cmd in obj.commands:
+        for idx, cmd in enumerate(obj.commands):
             has_commands = True
             if isinstance(cmd, Command):
                 if cmd.start_time < min_t:
                     min_t = cmd.start_time
                 if cmd.end_time > max_t:
                     max_t = cmd.end_time
+
+                if cmd.type == "P":
+                    p_command_indices.append(idx)
             elif isinstance(cmd, LoopCommand):
                 sub_max = 0
                 for sub_cmd in cmd.commands:
@@ -74,6 +78,15 @@ class StateEngine:
         else:
             obj.life_start = 0
             obj.life_end = 0
+
+        if p_command_indices:
+            # Check if start_time and end_time are the same
+            for idx in p_command_indices:
+                p_cmd = obj.commands[idx]
+                if p_cmd.start_time == p_cmd.end_time:
+                    # set the p_cmd time to object's lifetime
+                    p_cmd.start_time = obj.life_start
+                    p_cmd.end_time = obj.life_end
 
     def get_object_state(self, obj: SBObject, time: int) -> ObjectState | None:
         """
@@ -104,12 +117,11 @@ class StateEngine:
                 self._process_loop(cmd, time, state)
             elif isinstance(cmd, Command):
                 if cmd.type == "P":
-                    self._apply_parameter(cmd, state)
+                    self._apply_parameter(cmd, state, time)
                     continue
-
                 if time < cmd.start_time:
                     continue  # Command not started yet
-
+                progress = 0.0
                 if time > cmd.end_time:
                     progress = 1.0  # Command finished
                 else:
@@ -192,14 +204,16 @@ class StateEngine:
             state.g = self._lerp(p[1], p[4], progress)
             state.b = self._lerp(p[2], p[5], progress)
 
-    def _apply_parameter(self, cmd: Command, state: ObjectState):
+    def _apply_parameter(self, cmd: Command, state: ObjectState, time: int):
         param_type = cmd.params[0]
+        if time > cmd.end_time:
+            return  # Parameter commands have no interpolation
         if param_type == "H":
             state.flip_h = True
         elif param_type == "V":
             state.flip_v = True
         elif param_type == "A":
-            state.is_additive = True
+            state.additive = True
 
     def _lerp(self, start, end, t):
         return start + (end - start) * t
@@ -208,7 +222,6 @@ class StateEngine:
         """
         Calculate the current frame of the animation based on time.
         """
-
         if obj.frame_count <= 0:
             return  # No frames to display
 
@@ -230,3 +243,4 @@ class StateEngine:
 
         base, ext = obj.filepath.rsplit(".", 1)
         state.image_path = f"{base}{frame_index}.{ext}"
+        state.frame_index = frame_index
