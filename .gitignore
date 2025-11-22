@@ -14,3 +14,5 @@ ffmpeg.*
 
 # test output file
 output.mp4
+
+.vscode/
