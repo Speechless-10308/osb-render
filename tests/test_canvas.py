@@ -3,7 +3,7 @@ from src.models import Storyboard, Sprite, Layer, Origin, Command, LoopCommand, 
 from src.state_engine import StateEngine
 from src.parser import StoryboardParser
 from src.render import StoryboardRenderer
-from src.render_skia import RendererSkia
+from src.render_skia import SkiaRenderer
 from src.managers import AssetLoader
 import time
 import cv2
@@ -28,8 +28,34 @@ def test_render_frame_pil(times, filepath):
     img.save("test_render_frame_output_pil.png")
 
 
+def test_render_frame_skia(times, filepath):
+    basepath = os.path.dirname(filepath)
+
+    parser = StoryboardParser()
+    storyboard = parser.parse(filepath)
+    engine = StateEngine(storyboard)
+
+    assets_loader = AssetLoader(
+        base_path=basepath,
+    )
+
+    render = SkiaRenderer(engine, assets_loader, width=1920, height=1080)
+    st = time.time()
+    img = render.render_frame(times)
+    et = time.time()
+    print(f"Render time (Skia) for {times} ms: {(et - st)*1000:.2f} ms")
+    img.save("test_render_frame_output_skia.png")
+
+
 if __name__ == "__main__":
+    times = 100617
+    filepath = "C:\\MyOtherFiles\\osu!\\Songs\\2412263 nm-y - Datura Sh__va\\nm-y - Datura Shva (iljaaz).osb"
     test_render_frame_pil(
-        100617,
-        "C:\\MyOtherFiles\\osu!\\Songs\\2412263 nm-y - Datura Sh__va\\nm-y - Datura Shva (iljaaz).osb",
+        times,
+        filepath,
+    )
+
+    test_render_frame_skia(
+        times,
+        filepath,
     )
