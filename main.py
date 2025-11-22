@@ -1,7 +1,6 @@
-from src.render_skia import SkiaRenderer
+from src.render_skia import SkiaRenderer, SkiaRendererGpu
 from src.state_engine import StateEngine
 from src.managers import AssetLoader
-from src.render_skia import skia
 from src.models import Storyboard
 from src.parser import StoryboardParser
 from tqdm import tqdm
@@ -60,6 +59,7 @@ def main():
         "--duration", type=int, help="Override duration in ms (optional)"
     )
     parser.add_argument("--audio", help="Path to audio file to merge (optional)")
+    parser.add_argument("--gpu", "-g", action="store_true", help="Use GPU acceleration")
 
     args = parser.parse_args()
 
@@ -105,35 +105,59 @@ def main():
     ]
 
     print(f"Starting ffmpeg with command: {' '.join(ffmpeg_cmd)}")
-
-    process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
-
-    cpu_count = max(1, multiprocessing.cpu_count() - 1)
     total_frames = (total_duration * args.fps) // 1000 + 1
-    print(f"Using {cpu_count} CPU cores for rendering, total frames: {total_frames}")
+    process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
+    if args.gpu:
+        print("Using GPU acceleration for rendering.")
 
-    tasks = [int(i * 1000 / args.fps) for i in range(total_frames)]
+        renderer = SkiaRendererGpu(
+            engine, AssetLoader(base_path=basepath), args.width, args.height
+        )
+        try:
+            for i in range(total_frames):
+                time_ms = int(i * 1000 / args.fps)
+                frame = renderer.render_frame(time_ms)
+                process.stdin.write(frame.tobytes())
 
-    try:
-        with multiprocessing.Pool(
-            processes=cpu_count,
-            initializer=init_worker,
-            initargs=(engine, basepath, args.width, args.height),
-        ) as pool:
-            result_iter = pool.imap(render_frame_worker, tasks, chunksize=10)
+        except KeyboardInterrupt:
+            print("Rendering interrupted by user.")
+        except Exception as e:
+            print(f"An error occurred during rendering: {e}")
+        finally:
+            if process.stdin:
+                process.stdin.close()
+            process.wait()
+            print(f"Video saved to {args.output}")
 
-            for frame_bytes in result_iter:
-                process.stdin.write(frame_bytes)
+    else:
+        cpu_count = max(1, multiprocessing.cpu_count() - 1)
 
-    except KeyboardInterrupt:
-        print("Rendering interrupted by user.")
-    except Exception as e:
-        print(f"An error occurred during rendering: {e}")
-    finally:
-        if process.stdin:
-            process.stdin.close()
-        process.wait()
-        print(f"Video saved to {args.output}")
+        print(
+            f"Using {cpu_count} CPU cores for rendering, total frames: {total_frames}"
+        )
+
+        tasks = [int(i * 1000 / args.fps) for i in range(total_frames)]
+
+        try:
+            with multiprocessing.Pool(
+                processes=cpu_count,
+                initializer=init_worker,
+                initargs=(engine, basepath, args.width, args.height),
+            ) as pool:
+                result_iter = pool.imap(render_frame_worker, tasks, chunksize=10)
+
+                for frame_bytes in result_iter:
+                    process.stdin.write(frame_bytes)
+
+        except KeyboardInterrupt:
+            print("Rendering interrupted by user.")
+        except Exception as e:
+            print(f"An error occurred during rendering: {e}")
+        finally:
+            if process.stdin:
+                process.stdin.close()
+            process.wait()
+            print(f"Video saved to {args.output}")
 
     if args.audio and os.path.exists(args.audio):
         print(f"Merging audio from {args.audio}")
