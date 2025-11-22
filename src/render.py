@@ -33,9 +33,6 @@ class StoryboardRenderer:
             self.engine.storyboard.overlay_layer,
         ]
 
-        self.transform_cache = {}  # Cache for transformed images
-        self.max_cache_size = 1000  # Max number of cached items
-
     def _apply_transform(
         self, img: Image.Image, state: ObjectState, origin: Origin
     ) -> Tuple[Image.Image, int, int]:
@@ -49,7 +46,7 @@ class StoryboardRenderer:
             color_overlay = Image.new(
                 "RGBA", img.size, (int(state.r), int(state.g), int(state.b), 255)
             )
-            r, g, b, a = img.split()
+            a = img.getchannel("A")
             img = ImageChops.multiply(
                 img.convert("RGB"), color_overlay.convert("RGB")
             ).convert("RGBA")
@@ -78,7 +75,7 @@ class StoryboardRenderer:
 
         # Opacity
         if state.opacity < 1.0:
-            alpha = img.split()[3]
+            alpha = img.getchannel("A")
             alpha = ImageEnhance.Brightness(alpha).enhance(state.opacity)
             img.putalpha(alpha)
 

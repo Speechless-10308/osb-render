@@ -14,7 +14,7 @@ from src.managers import AssetLoader
 from src.state_engine import StateEngine
 
 
-class RendererCV:
+class RendererSkia:
     def __init__(
         self,
         storyboard: Storyboard,

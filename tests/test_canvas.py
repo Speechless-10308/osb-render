@@ -3,7 +3,7 @@ from src.models import Storyboard, Sprite, Layer, Origin, Command, LoopCommand, 
 from src.state_engine import StateEngine
 from src.parser import StoryboardParser
 from src.render import StoryboardRenderer
-from src.render_cv import RendererCV
+from src.render_skia import RendererSkia
 from src.managers import AssetLoader
 import time
 import cv2
@@ -21,9 +21,10 @@ def test_render_frame_pil(times, filepath):
     )
 
     render = StoryboardRenderer(engine, assets_loader, width=1920, height=1080)
-
+    st = time.time()
     img = render.render_frame(times)
-
+    et = time.time()
+    print(f"Render time (PIL) for {times} ms: {(et - st)*1000:.2f} ms")
     img.save("test_render_frame_output_pil.png")
 
 
