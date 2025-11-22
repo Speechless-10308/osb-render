@@ -6,7 +6,6 @@ from src.render import StoryboardRenderer
 from src.render_skia import SkiaRenderer
 from src.managers import AssetLoader
 import time
-import cv2
 
 
 def test_render_frame_pil(times, filepath):
@@ -48,7 +47,7 @@ def test_render_frame_skia(times, filepath):
 
 
 if __name__ == "__main__":
-    times = 100617
+    times = 154363
     filepath = "C:\\MyOtherFiles\\osu!\\Songs\\2412263 nm-y - Datura Sh__va\\nm-y - Datura Shva (iljaaz).osb"
     test_render_frame_pil(
         times,

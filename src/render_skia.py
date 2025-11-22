@@ -1,3 +1,5 @@
+from collections import defaultdict
+import time
 import skia
 import math
 from typing import Tuple, Dict
@@ -35,6 +37,38 @@ class SkiaRenderer:
             self.engine.storyboard.overlay_layer,
         ]
 
+        self.layer_names = [
+            "Background",
+            "Pass",
+            "Foreground",
+            "Overlay",
+        ]
+
+        self.layer_bucket = {
+            "Background": defaultdict(list),
+            "Fail": defaultdict(list),
+            "Pass": defaultdict(list),
+            "Foreground": defaultdict(list),
+            "Overlay": defaultdict(list),
+        }
+        self._preprocess_buckets()
+
+    def _preprocess_buckets(self, interval: int = 1000):
+        layer_maps = {
+            "Background": self.engine.storyboard.background_layer,
+            "Fail": self.engine.storyboard.fail_layer,
+            "Pass": self.engine.storyboard.pass_layer,
+            "Foreground": self.engine.storyboard.foreground_layer,
+            "Overlay": self.engine.storyboard.overlay_layer,
+        }
+
+        for layer, objects in layer_maps.items():
+            for obj in objects:
+                start = int(obj.life_start // interval)
+                end = int(obj.life_end // interval)
+                for bucket in range(start, end + 1):
+                    self.layer_bucket[layer][bucket].append(obj)
+
     def _get_skia_image(self, path: str) -> skia.Image:
         """
         Got Skia Image from path
@@ -67,8 +101,11 @@ class SkiaRenderer:
         with surface as canvas:
             canvas.clear(skia.ColorBLACK)  # Black background
 
-            for layer in self.layers:
-                for obj in layer:
+            bucket_index = time_ms // 1000
+            for layer in self.layer_names:
+                active_objects = self.layer_bucket[layer][bucket_index]
+
+                for obj in active_objects:
                     state = self.engine.get_object_state(obj, time_ms)
 
                     if not state or not state.visible or state.opacity < 0.001:
@@ -123,7 +160,7 @@ class SkiaRenderer:
                         )
 
                     paint.setAntiAlias(True)
-                    sampling = skia.SamplingOptions(skia.FilterMode.kLinear)
+                    sampling = skia.SamplingOptions(skia.FilterMode.kNearest)
 
                     w, h = img.width(), img.height()
                     ox, oy = self._get_origin_offset(w, h, obj.origin)
@@ -134,7 +171,6 @@ class SkiaRenderer:
                     # Restore the coordinate system state for the next object
                     canvas.restore()
 
-        # Return snapshot
         return surface.makeImageSnapshot()
 
     def _get_origin_offset(self, w: int, h: int, origin: Origin) -> Tuple[float, float]:
