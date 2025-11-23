@@ -1,0 +1,13 @@
+app:
+  last_open_dir: .
+renderer:
+  width: 1280
+  height: 720
+  fps: 60
+  encoder_preset: fast
+  crf: 20
+  enable_audio: true
+
+path:
+  output_path: ./output.mp4
+  osb_path: ./example.osb

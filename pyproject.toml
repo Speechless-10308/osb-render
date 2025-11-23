@@ -6,7 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "glfw>=2.10.0",
+    "loguru>=0.7.3",
     "pillow>=12.0.0",
+    "pydantic>=2.12.4",
+    "pyside6>=6.10.1",
+    "pyyaml>=6.0.3",
     "skia-python>=138.0",
     "tqdm>=4.67.1",
 ]
