@@ -156,7 +156,7 @@ class SkiaRenderer:
                     )
 
                 paint.setAntiAlias(True)
-                sampling = skia.SamplingOptions(skia.FilterMode.kNearest)
+                sampling = skia.SamplingOptions(skia.FilterMode.kLinear)
 
                 w, h = img.width(), img.height()
                 ox, oy = self._get_origin_offset(w, h, obj.origin)
@@ -222,10 +222,7 @@ class SkiaRendererGpu(SkiaRenderer):
 
         glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
-        # Try to create highest possible OpenGL context
-        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.RESIZABLE, glfw.FALSE)
 
         self.window = glfw.create_window(
             self.width, self.height, "HiddenGL", None, None
@@ -242,18 +239,18 @@ class SkiaRendererGpu(SkiaRenderer):
         if not self.context:
             raise RuntimeError("Failed to create Skia GrDirectContext")
 
-        framebuffer_info = skia.GrGLFramebufferInfo(0, 0x8058)  # GL_RGBA8
-        backend_render_target = skia.GrBackendRenderTarget(
-            self.width, self.height, 0, 0, framebuffer_info
+        # Create Skia GPU surface
+        image_info = skia.ImageInfo.Make(
+            self.width,
+            self.height,
+            skia.kRGBA_8888_ColorType,
+            skia.kPremul_AlphaType,
         )
 
-        # gpu surface
-        self.surface = skia.Surface.MakeFromBackendRenderTarget(
+        self.surface = skia.Surface.MakeRenderTarget(
             self.context,
-            backend_render_target,
-            skia.kBottomLeft_GrSurfaceOrigin,
-            skia.kRGBA_8888_ColorType,
-            skia.ColorSpace.MakeSRGB(),
+            skia.Budgeted.kNo,
+            image_info,
         )
 
         if not self.surface:

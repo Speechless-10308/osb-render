@@ -10,6 +10,8 @@ import os
 import subprocess
 import multiprocessing
 import time
+import skia
+import numpy as np
 from typing import Optional
 
 worker_renderer: Optional[SkiaRenderer] = None
@@ -108,7 +110,7 @@ def main():
     total_frames = (total_duration * args.fps) // 1000 + 1
     process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
     if args.gpu:
-        print("Using GPU acceleration for rendering.")
+        print(f"Using GPU acceleration for rendering with {total_frames} frames.")
 
         renderer = SkiaRendererGpu(
             engine, AssetLoader(base_path=basepath), args.width, args.height
@@ -117,6 +119,10 @@ def main():
             for i in range(total_frames):
                 time_ms = int(i * 1000 / args.fps)
                 frame = renderer.render_frame(time_ms)
+                frame = frame.toarray(colorType=skia.kRGBA_8888_ColorType)
+                frame = frame[: args.height, : args.width, :]
+                frame = np.ascontiguousarray(frame)
+
                 process.stdin.write(frame.tobytes())
 
         except KeyboardInterrupt:
