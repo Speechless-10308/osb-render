@@ -8,8 +8,9 @@ uv sync
 ```
 Use the tool with the following command (to use gpu accelaration):
 ```shell
-uv run main.py [osb_path] -o [output_path] --width 1920 --height 1080 --audio [audio_path] --gpu
+uv run main.py [osu_path] -o [output_path] --width 1920 --height 1080 --gpu
 ```
+Note that it is **osu_path**, the program will automatically detect the existence of audio and storyboard.
 
 ## TODO
 - [ ] An application with gui.
