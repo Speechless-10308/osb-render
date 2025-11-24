@@ -23,6 +23,7 @@ Use the following command to run a GUI version:
 ```shell
 uv run app.py
 ```
+Note that it is **osu_path**, the program will automatically detect the existence of audio and storyboard.
 
 ## TODO
 - [x] An application with gui. (Partially done, with a lot of unknown bugs.)
