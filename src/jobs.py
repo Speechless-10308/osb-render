@@ -196,6 +196,7 @@ class RenderJob:
             AssetLoader(base_path=self.base_path),
             self.cfg.renderer.width,
             self.cfg.renderer.height,
+            self.cfg.renderer.sample_method,
         )
         for i in range(total_frames):
             if self._stop_requested:

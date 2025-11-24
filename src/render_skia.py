@@ -3,7 +3,6 @@ import time
 import skia
 import math
 from typing import Tuple, Dict
-from PIL import Image
 import numpy as np
 from src.models import Layer, Origin, ObjectState, Vector2
 from src.state_engine import StateEngine
@@ -18,11 +17,16 @@ class SkiaRenderer:
         asset_loader: AssetLoader,
         width: int = 1280,
         height: int = 720,
+        method: str = "linear",
     ):
         self.engine = engine
         self.asset_loader = asset_loader
         self.width = width
         self.height = height
+        if method == "nearest":
+            self.sample_method = skia.FilterMode.kNearest
+        else:
+            self.sample_method = skia.FilterMode.kLinear
 
         # cache for skia images
         self.image_cache: Dict[str, skia.Image] = {}
@@ -70,32 +74,6 @@ class SkiaRenderer:
                 for bucket in range(start, end + 1):
                     self.layer_bucket[layer][bucket].append(obj)
 
-    def _get_skia_image(self, path: str) -> skia.Image:
-        """
-        Got Skia Image from path
-        """
-        if path in self.image_cache:
-            return self.image_cache[path]
-
-        pil_img = self.asset_loader.load_image(path, method="pil")
-        if pil_img == self.asset_loader.placeholder:
-            return None  # Or handle placeholder
-
-        # Ensure RGBA
-        if pil_img.mode != "RGBA":
-            pil_img = pil_img.convert("RGBA")
-
-        # Convert to Skia Image
-        # tobytes() is faster because it's a memory copy
-        array = np.array(pil_img)
-        skia_img = skia.Image.fromarray(
-            array, skia.kRGBA_8888_ColorType, skia.kUnpremul_AlphaType
-        )
-
-        # Cache it
-        self.image_cache[path] = skia_img
-        return skia_img
-
     def draw_to_canvas(self, canvas: skia.Canvas, time_ms: int):
         """
         Draw the frame directly to a given Skia canvas
@@ -113,7 +91,7 @@ class SkiaRenderer:
                 if abs(state.scale_vec.x) < 0.001 and abs(state.scale_vec.y) < 0.001:
                     continue
 
-                img = self._get_skia_image(state.image_path)
+                img = self.asset_loader.load_image(state.image_path)
                 if img is None:
                     continue
 
@@ -156,7 +134,7 @@ class SkiaRenderer:
                     )
 
                 paint.setAntiAlias(True)
-                sampling = skia.SamplingOptions(skia.FilterMode.kLinear)
+                sampling = skia.SamplingOptions(self.sample_method)
 
                 w, h = img.width(), img.height()
                 ox, oy = self._get_origin_offset(w, h, obj.origin)
@@ -212,8 +190,9 @@ class SkiaRendererGpu(SkiaRenderer):
         asset_loader: AssetLoader,
         width: int = 1280,
         height: int = 720,
+        method: str = "linear",
     ):
-        super().__init__(engine, asset_loader, width, height)
+        super().__init__(engine, asset_loader, width, height, method)
         self._init_gl_context()
 
     def _init_gl_context(self):

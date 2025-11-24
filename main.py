@@ -5,6 +5,7 @@ from tqdm import tqdm
 import argparse
 import numpy as np
 from typing import Optional
+from loguru import logger
 
 
 class ProgressBar:
@@ -27,6 +28,8 @@ class ProgressBar:
 
 
 def main():
+    logger.add("render.log", rotation="10 MB")
+
     parser = argparse.ArgumentParser(description="Render osu! storyboards to video.")
     parser.add_argument("osu_file", type=str, help="Path to the .osu file.")
     parser.add_argument(

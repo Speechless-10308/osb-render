@@ -1,13 +1,15 @@
 app:
   last_open_dir: .
+path:
+  osu_path: C:/MyOtherFiles/osu!/Songs/MetaHumanBoi - kinetic flux/MetaHumanBoi -
+    kinetic flux (mintIceCream_) [Expert].osu
+  output_path: C:/MyOtherFiles/DEV/osb-render/output.mp4
 renderer:
-  width: 1280
-  height: 720
-  fps: 60
-  encoder_preset: fast
   crf: 20
   enable_audio: true
-
-path:
-  output_path: ./output.mp4
-  osb_path: ./example.osb
+  encoder_preset: fast
+  fps: 60
+  height: 720
+  sample_method: linear
+  use_gpu: true
+  width: 1280

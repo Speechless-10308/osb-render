@@ -16,6 +16,7 @@ class RendererConfig(BaseModel):
     encoder_preset: str = "fast"
     crf: int = 20
     use_gpu: bool = True
+    sample_method: str = "linear"
     enable_audio: bool = True
 
 

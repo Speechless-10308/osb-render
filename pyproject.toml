@@ -1,13 +1,13 @@
 [project]
 name = "osb-render"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple osb render which convert the osu! storyboard into video."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "glfw>=2.10.0",
     "loguru>=0.7.3",
-    "pillow>=12.0.0",
+    "nuitka>=2.8.6",
     "pydantic>=2.12.4",
     "pyside6>=6.10.1",
     "pyyaml>=6.0.3",

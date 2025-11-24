@@ -5,6 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
+app.build
+app.dist
 
 # Virtual environments
 .venv
@@ -15,4 +17,11 @@ ffmpeg.*
 # test output file
 output.mp4
 
+# OS generated files
+.DS_Store
+Thumbs.db
+.idea/
 .vscode/
+
+# Logs
+*.log
