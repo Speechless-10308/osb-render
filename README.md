@@ -30,5 +30,8 @@ Note that it is **osu_path**, the program will automatically detect the existenc
 - [ ] Some unknown bugs maybe...
 - [ ] A good looking README.
 
+## Acknowledgements
+This project is powered by [glfw](https://www.glfw.org/), [skia](https://skia.org/) and [PySide6](https://pypi.org/project/PySide6/). We are thanks to their awesome work!
+
 ---
 These are just some entertainment pieces I made in my spare time from research. Forgive me, my boss!!!
