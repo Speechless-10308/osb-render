@@ -18,11 +18,13 @@ uv run main.py [osu_path] -o [output_path] --width 1920 --height 1080 --gpu
 uv run app.py
 
 # Run tests
-uv run tests/test_engine.py
-uv run tests/test_canvas.py
-```
+uv run tests/test_engine.py    # StateEngine: construction, parser integration, real storyboard
+uv run tests/test_canvas.py    # Renderer: frame rendering via PIL, Skia CPU, Skia GPU
 
-Python 3.13 via uv. No test framework installed -- tests are standalone scripts run directly.
+# Build with Nuitka
+uv run nuitka app.py --standalone --enable-plugin=pyside6 --windows-console-mode=disable
+
+Python 3.13 via uv. No test framework installed -- tests are standalone scripts run directly (no pytest).
 
 ## Architecture
 
@@ -46,6 +48,10 @@ This app renders osu! storyboard (.osb) files into video. The rendering pipeline
 - **[apps/widgets.py](apps/widgets.py)** — `ResolutionWidget` with aspect-ratio-locked width/height spinboxes
 - **[apps/dialogs.py](apps/dialogs.py)** — `AdvancedSettingsDialog` for encoder preset, CRF, sampling method, audio toggle
 
+### Config
+
+- **[configs/config.yaml](configs/config.yaml)** — Default configuration with `app` (last directory), `path` (osu/output paths), and `renderer` (resolution, FPS, GPU toggle, encoder preset, CRF, audio toggle, sample method) sections. CLI arguments override YAML values via `Config.from_yaml()`.
+
 ### Entry points
 
 - **[main.py](main.py)** — CLI with argparse, creates `Config` from YAML + CLI overrides, runs `RenderJob` with tqdm progress bar
@@ -54,7 +60,6 @@ This app renders osu! storyboard (.osb) files into video. The rendering pipeline
 
 ### Other
 
-- **[configs/config.yaml](configs/config.yaml)** — Default configuration file with path/renderer/app settings
 - **[reference/](reference/)** — osu! storyboard specification reference docs for general rules, objects, commands, audio, compound commands, and shorthand syntax
 - **ffmpeg.exe** — Bundled ffmpeg binary for video encoding and audio merging
 - **Nuitka builds** — `app.build/` and `app.dist/` are Nuitka-compiled outputs of `app.py`
@@ -65,4 +70,5 @@ This app renders osu! storyboard (.osb) files into video. The rendering pipeline
 - osu! uses a 640x480 coordinate system; the renderer scales to output resolution using `height / 480.0` as the scale factor, centering horizontally with an x-offset
 - Command shorthand expansion happens in the parser: multiple value pairs with equal duration are expanded into sequential commands; start-only shorthand duplicates values for end
 - GPU renderer creates an invisible GLFW window for OpenGL context, renders via Skia GPU backend
-- Audio merge runs as a second pass after raw video rendering, combining the output with the beatmap's audio file
+- Audio merge runs as a second pass after raw video rendering, combining the output with the beatmap's audio file (auto-detected alongside .osb from the .osu file path)
+- The CLI accepts an `.osu` file path; the program automatically locates the adjacent `.osb` storyboard and audio file

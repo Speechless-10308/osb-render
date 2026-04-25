@@ -1,4 +1,5 @@
 import os
+import platform
 from apps.threads import RenderThread
 from apps.dialogs import AdvancedSettingsDialog
 from apps.widgets import ResolutionWidget
@@ -26,6 +27,39 @@ from PySide6.QtGui import QIcon, QTextCursor
 from src.config import Config
 
 
+def _get_user_config_dir() -> str:
+    """Return a platform-appropriate directory for user-local config."""
+    if platform.system() == "Windows":
+        base = os.environ.get("APPDATA", os.path.expanduser("~"))
+    else:
+        base = os.path.join(os.path.expanduser("~"), ".config")
+    return os.path.join(base, "osb-render")
+
+
+def _get_user_config_path() -> str:
+    return os.path.join(_get_user_config_dir(), "config.yaml")
+
+
+def _load_config() -> Config:
+    """Load config from user dir first, then fall back to repo defaults."""
+    user_path = _get_user_config_path()
+    if os.path.exists(user_path):
+        try:
+            return Config.from_yaml(user_path)
+        except Exception:
+            pass
+
+    # Fall back to the repo-shipped default config
+    repo_path = "configs/config.yaml"
+    if os.path.exists(repo_path):
+        try:
+            return Config.from_yaml(repo_path)
+        except Exception:
+            pass
+
+    return Config()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -34,20 +68,10 @@ class MainWindow(QMainWindow):
         self.resize(500, 300)
 
         self.worker = None
-        self.default_config_path = "configs/config.yaml"
-        self.config = Config()
-        yaml_load_failed = False
-        if os.path.exists(self.default_config_path):
-            try:
-                self.config = Config.from_yaml(self.default_config_path)
-            except Exception:
-                yaml_load_failed = True  # setup_ui not ready yet, defer the log message
+        self.config = _load_config()
 
         self.aspect_ratio = self.config.renderer.width / self.config.renderer.height
         self.setup_ui()
-
-        if yaml_load_failed:
-            self.log_message("Failed to load default config, using defaults.", "ERROR")
 
         self.res_widget.set_values(
             self.config.renderer.width, self.config.renderer.height
@@ -268,7 +292,7 @@ class MainWindow(QMainWindow):
         cfg.renderer.fps = self.fps_spin.value()
         cfg.renderer.use_gpu = self.gpu_checkbox.isChecked()
 
-        cfg.to_yaml("configs/config.yaml")
+        cfg.to_yaml(_get_user_config_path())
 
         self.worker = RenderThread(config=cfg)
         self.worker.progress_signal.connect(self.update_progress)

@@ -1,0 +1,26 @@
+# =============================================================================
+# osb-render configuration example
+# =============================================================================
+# Copy this file to config.yaml and edit values as needed.
+# The app saves runtime config (last paths, settings) to ~/.osb-render/config.yaml
+# so this file stays clean for version control.
+# =============================================================================
+
+app:
+  last_open_dir: "."
+
+path:
+  # Path to the .osu file (the app will auto-detect the adjacent .osb and audio)
+  osu_path: "./example.osu"
+  # Output video path
+  output_path: "./output.mp4"
+
+renderer:
+  width: 1280
+  height: 720
+  fps: 60
+  use_gpu: true
+  encoder_preset: "fast"
+  crf: 20
+  sample_method: "linear"
+  enable_audio: true

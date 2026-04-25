@@ -1,10 +1,8 @@
 app:
   last_open_dir: .
 path:
-  osu_path: C:/MyOtherFiles/osu!/Songs/1841885 cYsmix - triangles/cYsmix - triangles
-    (yf_bmp) [Easy].osu
-  output_path: C:/MyOtherFiles/osu!/Songs/1841885 cYsmix - triangles/cYsmix - triangles
-    (yf_bmp) [Chaoz's Expert].mp4
+  osu_path: ./example.osu
+  output_path: ./output.mp4
 renderer:
   crf: 20
   enable_audio: true
