@@ -57,12 +57,20 @@ class StateEngine:
                 if cmd.type == "P":
                     p_command_indices.append(idx)
             elif isinstance(cmd, LoopCommand):
+                cmd.commands.sort(key=lambda c: c.start_time)
+
                 sub_max = 0
                 for sub_cmd in cmd.commands:
                     if sub_cmd.end_time > sub_max:
                         sub_max = sub_cmd.end_time
 
                 cmd.sub_max = sub_max  # Store for later use
+
+                # Expand zero-duration P commands inside loops to full loop duration
+                for sub_cmd in cmd.commands:
+                    if isinstance(sub_cmd, Command) and sub_cmd.type == "P":
+                        if sub_cmd.start_time == sub_cmd.end_time:
+                            sub_cmd.end_time = sub_max
 
                 lp_start = cmd.start_time
                 lp_end = cmd.start_time + sub_max * cmd.loop_count
@@ -142,6 +150,12 @@ class StateEngine:
         for cmd in commands:
             if isinstance(cmd, LoopCommand):
                 self._process_loop(cmd, time, state)
+                # Propagate loop sub-command categories to prevent later
+                # top-level commands from overriding values the loop already set
+                for sub_cmd in cmd.commands:
+                    if isinstance(sub_cmd, Command):
+                        for cat in self._get_command_categories(sub_cmd.type):
+                            processed_categories.add(cat)
             elif isinstance(cmd, Command):
                 if cmd.type == "P":
                     self._apply_parameter(cmd, state, time)

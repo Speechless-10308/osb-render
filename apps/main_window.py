@@ -36,15 +36,18 @@ class MainWindow(QMainWindow):
         self.worker = None
         self.default_config_path = "configs/config.yaml"
         self.config = Config()
+        yaml_load_failed = False
         if os.path.exists(self.default_config_path):
             try:
                 self.config = Config.from_yaml(self.default_config_path)
-            except:
-                self.log_message("Failed to load default config.", "ERROR")
-                pass
+            except Exception:
+                yaml_load_failed = True  # setup_ui not ready yet, defer the log message
 
         self.aspect_ratio = self.config.renderer.width / self.config.renderer.height
         self.setup_ui()
+
+        if yaml_load_failed:
+            self.log_message("Failed to load default config, using defaults.", "ERROR")
 
         self.res_widget.set_values(
             self.config.renderer.width, self.config.renderer.height
@@ -256,7 +259,7 @@ class MainWindow(QMainWindow):
 
         self.log_message("Starting rendering...", "INFO")
 
-        cfg = self.config if hasattr(self, "config") else Config()
+        cfg = self.config
         cfg.path.osu_path = osu_path
         cfg.path.output_path = self.out_path_edit.text()
         width, height = self.res_widget.get_values()
@@ -287,7 +290,7 @@ class MainWindow(QMainWindow):
         self.browse_out_button.setEnabled(True)
 
     def stop_rendering(self):
-        if self.worker:
+        if self.worker is not None and self.worker.isRunning():
             self.worker.stop_task()
             self.log_message(
                 "Stop requested. Waiting for current frame to finish...", "WARNING"

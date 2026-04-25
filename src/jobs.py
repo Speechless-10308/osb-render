@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import subprocess
+import threading
 from typing import Callable, List, Optional
 from src.parser import StoryboardParser
 from src.models import Storyboard
@@ -56,7 +57,7 @@ class RenderJob:
     def __init__(self, config: Config):
         self.cfg: Config = config
 
-        self._stop_requested: bool = False
+        self._stop_event = threading.Event()
         self.base_path: str = os.path.dirname(self.cfg.path.osu_path)
 
         osu_path = self.cfg.path.osu_path
@@ -80,7 +81,7 @@ class RenderJob:
         self.log_callback = log_callback
 
     def stop(self):
-        self._stop_requested = True
+        self._stop_event.set()
 
     def _get_video_duration(self, storyboard: Storyboard) -> int:
         max_time = 0
@@ -175,7 +176,7 @@ class RenderJob:
                 process.stdin.close()
             process.wait()
 
-        if not self._stop_requested:
+        if not self._stop_event.is_set():
             self.log_callback(
                 f"Rendering completed successfully. Video saved to {self.cfg.path.output_path}",
                 "INFO",
@@ -199,7 +200,7 @@ class RenderJob:
             self.cfg.renderer.sample_method,
         )
         for i in range(total_frames):
-            if self._stop_requested:
+            if self._stop_event.is_set():
                 break
             time_ms = int(i * 1000 / self.cfg.renderer.fps)
             frame = renderer.render_frame(time_ms)
@@ -210,7 +211,7 @@ class RenderJob:
             if i % 30 == 0 and self.progress_callback:
                 self.progress_callback(i + 1, total_frames)
 
-        if not self._stop_requested:
+        if not self._stop_event.is_set():
             self.progress_callback(total_frames, total_frames)
 
     def _render_cpu(
@@ -238,7 +239,7 @@ class RenderJob:
             result_iter = pool.imap(render_frame_worker, tasks, chunksize=10)
 
             for i, frame_bytes in enumerate(result_iter):
-                if self._stop_requested:
+                if self._stop_event.is_set():
                     pool.terminate()
                     break
 
@@ -247,7 +248,7 @@ class RenderJob:
                 if i % 30 == 0 and self.progress_callback:
                     self.progress_callback(i + 1, total_frames)
 
-        if not self._stop_requested:
+        if not self._stop_event.is_set():
             self.progress_callback(total_frames, total_frames)
 
     def _merge_audio(self):
@@ -255,6 +256,8 @@ class RenderJob:
             self.log_callback(f"Merging audio from {self.audio_path}", "INFO")
             output = self.cfg.path.output_path
             temp_output = output + ".temp.mp4"
+            if os.path.exists(temp_output):
+                os.remove(temp_output)
             if os.path.exists(output):
                 os.rename(output, temp_output)
 
@@ -273,9 +276,17 @@ class RenderJob:
                 output,
             ]
 
-            subprocess.run(
+            result = subprocess.run(
                 ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
             )
+            if result.returncode != 0:
+                self.log_callback(
+                    f"Audio merge failed: {result.stderr.decode('utf-8', errors='replace')}",
+                    "ERROR",
+                )
+                if os.path.exists(temp_output):
+                    os.replace(temp_output, output)
+                return
 
             if os.path.exists(temp_output):
                 os.remove(temp_output)

@@ -47,5 +47,6 @@ class Config(BaseModel):
             return cls()
 
     def to_yaml(self, yamlpath: str):
+        os.makedirs(os.path.dirname(yamlpath), exist_ok=True)
         with open(yamlpath, "w", encoding="utf-8") as f:
             yaml.dump(self.model_dump(), f, default_flow_style=False)

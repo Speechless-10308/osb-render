@@ -1,9 +1,10 @@
 app:
   last_open_dir: .
 path:
-  osu_path: C:/MyOtherFiles/osu!/Songs/MetaHumanBoi - kinetic flux/MetaHumanBoi -
-    kinetic flux (mintIceCream_) [Expert].osu
-  output_path: C:/MyOtherFiles/DEV/osb-render/output.mp4
+  osu_path: C:/MyOtherFiles/osu!/Songs/1841885 cYsmix - triangles/cYsmix - triangles
+    (yf_bmp) [Easy].osu
+  output_path: C:/MyOtherFiles/osu!/Songs/1841885 cYsmix - triangles/cYsmix - triangles
+    (yf_bmp) [Chaoz's Expert].mp4
 renderer:
   crf: 20
   enable_audio: true

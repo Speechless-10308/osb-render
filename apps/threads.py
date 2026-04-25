@@ -17,11 +17,11 @@ class RenderThread(QThread):
     def __init__(self, config: Config):
         super().__init__()
         self.config: Config = config
-        self.job: RenderJob = None
+        # Create RenderJob in the main thread to avoid cross-thread access races
+        self.job = RenderJob(self.config)
 
     def run(self):
         try:
-            self.job = RenderJob(self.config)
             self.job.set_callbacks(
                 progress_callback=self._on_progress,
                 log_callback=self._on_log,
