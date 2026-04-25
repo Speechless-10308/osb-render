@@ -1,6 +1,6 @@
 [project]
 name = "osb-render"
-version = "0.0.1"
+version = "0.0.2"
 description = "A simple osb render which convert the osu! storyboard into video."
 readme = "README.md"
 requires-python = ">=3.13"
