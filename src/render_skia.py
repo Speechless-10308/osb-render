@@ -139,7 +139,14 @@ class SkiaRenderer:
                 w, h = img.width(), img.height()
                 ox, oy = self._get_origin_offset(w, h, obj.origin)
 
-                # Draw in the current transformed coordinate system
+                # When flipped, the negative scale mirrors the local coordinate
+                # system. Adjust the draw offset so the visual bounding box
+                # stays on the same side of the origin — only the content flips.
+                if state.flip_h:
+                    ox = w - ox
+                if state.flip_v:
+                    oy = h - oy
+
                 canvas.drawImage(img, -ox, -oy, sampling, paint)
 
                 # Restore the coordinate system state for the next object

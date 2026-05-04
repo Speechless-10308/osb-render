@@ -1,0 +1,256 @@
+"""
+Debug test: render a single frame with sprite filepath labels, frame number,
+and render time overlaid on the output image.
+"""
+import os
+import sys
+import time
+import math
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import skia
+from src.models import Layer, Origin, ObjectState, Vector2
+from src.state_engine import StateEngine
+from src.parser import StoryboardParser
+from src.render_skia import SkiaRenderer, SkiaRendererGpu
+from src.managers import AssetLoader
+
+
+class DebugSkiaRenderer(SkiaRenderer):
+    """Skia renderer that draws debug overlays: sprite filepaths, frame number, render time."""
+
+    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear"):
+        super().__init__(engine, asset_loader, width, height, method)
+        self.render_time_ms = 0.0
+
+        # Use a monospace font for legibility
+        typeface = skia.Typeface("Consolas") or skia.Typeface("Courier New") or skia.Typeface()
+        self.debug_font = skia.Font(typeface, 11)
+        self.info_font = skia.Font(typeface, 16)
+
+    def draw_to_canvas(self, canvas: skia.Canvas, time_ms: int):
+        canvas.clear(skia.ColorBLACK)
+        bucket_index = time_ms // 1000
+
+        # ---- first pass: draw all sprites, recording positions for labels ----
+        label_entries = []  # (filepath, screen_x, screen_y)
+
+        for layer in self.layer_names:
+            for obj in self.layer_bucket[layer][bucket_index]:
+                state = self.engine.get_object_state(obj, time_ms)
+
+                if not state or not state.visible or state.opacity < 0.001:
+                    continue
+                if abs(state.scale_vec.x) < 0.001 and abs(state.scale_vec.y) < 0.001:
+                    continue
+
+                img = self.asset_loader.load_image(state.image_path)
+                if img is None:
+                    continue
+
+                canvas.save()
+
+                final_x = self.offset_x + state.position.x * self.scale_factor
+                final_y = self.offset_y + state.position.y * self.scale_factor
+                canvas.translate(final_x, final_y)
+
+                if abs(state.rotation) > 0.0001:
+                    canvas.rotate(math.degrees(state.rotation))
+
+                sx = state.scale_vec.x * self.scale_factor
+                sy = state.scale_vec.y * self.scale_factor
+                if state.flip_h:
+                    sx = -sx
+                if state.flip_v:
+                    sy = -sy
+                canvas.scale(sx, sy)
+
+                paint = skia.Paint()
+                paint.setAlpha(int(state.opacity * 255))
+                if state.additive:
+                    paint.setBlendMode(skia.BlendMode.kPlus)
+                if state.r != 255 or state.g != 255 or state.b != 255:
+                    color = skia.Color(int(state.r), int(state.g), int(state.b))
+                    paint.setColorFilter(skia.ColorFilters.Blend(color, skia.BlendMode.kModulate))
+                paint.setAntiAlias(True)
+
+                sampling = skia.SamplingOptions(self.sample_method)
+                w, h = img.width(), img.height()
+                ox, oy = self._get_origin_offset(w, h, obj.origin)
+                if state.flip_h:
+                    ox = w - ox
+                if state.flip_v:
+                    oy = h - oy
+                canvas.drawImage(img, -ox, -oy, sampling, paint)
+                canvas.restore()
+
+                label_entries.append((obj.filepath, final_x, final_y))
+
+        # ---- second pass: draw debug overlays ----
+        self._draw_sprite_labels(canvas, label_entries)
+        self._draw_frame_info(canvas, time_ms)
+
+    def _draw_sprite_labels(self, canvas, entries):
+        """Draw each sprite's filepath at its origin point on screen."""
+        fg = skia.Paint(AntiAlias=True, Color=skia.ColorYELLOW)
+
+        # Thin dark outline so yellow text stays readable on any background
+        outline = skia.Paint()
+        outline.setAntiAlias(True)
+        outline.setColor(skia.ColorBLACK)
+        outline.setStyle(skia.Paint.kStroke_Style)
+        outline.setStrokeWidth(2.5)
+
+        for filepath, x, y in entries:
+            canvas.drawString(filepath, x + 2, y - 2, self.debug_font, outline)
+            canvas.drawString(filepath, x, y - 4, self.debug_font, fg)
+
+    def _draw_frame_info(self, canvas, time_ms):
+        """Draw frame timestamp and render time at the top-left corner."""
+        bg = skia.Paint(AntiAlias=True, Color=skia.Color(0, 0, 0, 200))
+        fg = skia.Paint(AntiAlias=True, Color=skia.ColorWHITE)
+
+        frame_text = f"Frame: {time_ms} ms"
+        time_text = f"Render time: {self.render_time_ms:.2f} ms"
+
+        # Semi-transparent backdrop
+        text_w = 320
+        text_h = 50
+        canvas.drawRect(skia.Rect(8, 8, 8 + text_w, 8 + text_h), bg)
+
+        canvas.drawString(frame_text, 18, 30, self.info_font, fg)
+        canvas.drawString(time_text, 18, 46, self.info_font, fg)
+
+    def render_frame(self, time_ms: int) -> skia.Image:
+        surface = skia.Surface.MakeRaster(
+            skia.ImageInfo.Make(
+                self.width, self.height,
+                skia.kRGBA_8888_ColorType, skia.kPremul_AlphaType,
+            )
+        )
+
+        st = time.perf_counter()
+        with surface as canvas:
+            self.draw_to_canvas(canvas, time_ms)
+        et = time.perf_counter()
+        self.render_time_ms = (et - st) * 1000
+
+        # Redraw time info now that render_time_ms is known
+        with surface as canvas:
+            self._draw_frame_info(canvas, time_ms)
+
+        return surface.makeImageSnapshot()
+
+
+class DebugSkiaRendererGpu(DebugSkiaRenderer):
+    """GPU-accelerated variant of the debug renderer."""
+
+    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear"):
+        super().__init__(engine, asset_loader, width, height, method)
+        self._init_gl_context()
+
+    def _init_gl_context(self):
+        import glfw
+        if not glfw.init():
+            raise RuntimeError("GLFW init failed")
+        glfw.window_hint(glfw.VISIBLE, False)
+        glfw.window_hint(glfw.RESIZABLE, False)
+        self.window = glfw.create_window(self.width, self.height, "DebugGL", None, None)
+        if not self.window:
+            glfw.terminate()
+            raise RuntimeError("GLFW window creation failed")
+        glfw.make_context_current(self.window)
+        self.context = skia.GrDirectContext.MakeGL()
+        if not self.context:
+            raise RuntimeError("Skia GrDirectContext creation failed")
+        info = skia.ImageInfo.Make(
+            self.width, self.height, skia.kRGBA_8888_ColorType, skia.kPremul_AlphaType,
+        )
+        self.surface = skia.Surface.MakeRenderTarget(self.context, skia.Budgeted.kNo, info)
+        if not self.surface:
+            raise RuntimeError("GPU surface creation failed")
+
+    def render_frame(self, time_ms: int) -> skia.Image:
+        import glfw
+        glfw.make_context_current(self.window)
+
+        st = time.perf_counter()
+        with self.surface as canvas:
+            self.draw_to_canvas(canvas, time_ms)
+        et = time.perf_counter()
+        self.render_time_ms = (et - st) * 1000
+
+        # Redraw time info
+        with self.surface as canvas:
+            self._draw_frame_info(canvas, time_ms)
+
+        self.context.flush()
+        return self.surface.makeImageSnapshot()
+
+    def __del__(self):
+        try:
+            if hasattr(self, "window") and self.window:
+                import glfw
+                glfw.destroy_window(self.window)
+            if hasattr(self, "context") and self.context:
+                self.context.abandonContext()
+            import glfw
+            glfw.terminate()
+        except Exception:
+            pass
+
+
+def test_debug_frame(
+    time_ms: int,
+    filepath: str,
+    width: int = 1920,
+    height: int = 1080,
+    output: str = None,
+    gpu: bool = False,
+):
+    basepath = os.path.dirname(filepath)
+
+    print(f"Parsing: {filepath}")
+    parser = StoryboardParser()
+    storyboard = parser.parse(filepath)
+    engine = StateEngine(storyboard)
+    asset_loader = AssetLoader(base_path=basepath)
+
+    cls = DebugSkiaRendererGpu if gpu else DebugSkiaRenderer
+    renderer = cls(engine, asset_loader, width=width, height=height)
+
+    print(f"Rendering at T={time_ms} ms ({width}x{height}, {'GPU' if gpu else 'CPU'}) ...")
+    img = renderer.render_frame(time_ms)
+
+    if output is None:
+        base = os.path.splitext(os.path.basename(filepath))[0]
+        suffix = "_gpu" if gpu else ""
+        output = f"debug_frame_T{time_ms}{suffix}.png"
+
+    img.save(output)
+    print(f"Saved -> {output}")
+    print(f"Render time: {renderer.render_time_ms:.2f} ms")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Render a single debug frame with overlays")
+    ap.add_argument("osb_path", help="Path to .osb (or .osu) file")
+    ap.add_argument("-t", "--time", type=int, default=0, help="Timestamp in ms to render")
+    ap.add_argument("-W", "--width", type=int, default=1920)
+    ap.add_argument("-H", "--height", type=int, default=1080)
+    ap.add_argument("-o", "--output", default=None, help="Output PNG path")
+    ap.add_argument("--gpu", action="store_true", help="Use GPU renderer")
+
+    args = ap.parse_args()
+
+    test_debug_frame(
+        time_ms=args.time,
+        filepath=args.osb_path,
+        width=args.width,
+        height=args.height,
+        output=args.output,
+        gpu=args.gpu,
+    )

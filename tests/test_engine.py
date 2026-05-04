@@ -108,7 +108,7 @@ _F,0,2000,4000,1,0,1,0
 
 
 def test_real_storyboard():
-    osb_path = "tests\\cYsmix - triangles (yf_bmp).osb"
+    osb_path = "tests\\TWC Sound Team Strike Back Squad - BUZZ CUTZ (Blocko).osb"
     from src.parser import StoryboardParser
 
     parser = StoryboardParser()
@@ -117,14 +117,14 @@ def test_real_storyboard():
 
     # print(sb)
 
-    test_time = [112043]
+    test_time = [481218]
     for t in test_time:
         print(f"\n--- States at T={t} ---")
         for obj in sb.background_layer:
             state = engine.get_object_state(obj, t)
-            if state and obj.filepath == "SB\\bf2.png" and obj.life_start == 111560:
+            if state and obj.filepath == "sb\\tatsuma\\sleepi.png" and obj.life_start == 477822:
                 print(
-                    f"BG Object: File={obj.filepath} Pos=({state.position.x}, {state.position.y}), Opacity={state.opacity} Scale=({state.scale_vec.x}, {state.scale_vec.y})"
+                    f"BG Object: File={obj.filepath} Pos=({state.position.x}, {state.position.y}), Opacity={state.opacity} Scale=({state.scale_vec.x}, {state.scale_vec.y}) IsFlippedH={state.flip_h} IsFlippedV={state.flip_v}"
                 )
                 print(f"Commands affecting this object at T={t}: {obj.commands}")
 
