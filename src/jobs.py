@@ -14,15 +14,38 @@ from loguru import logger
 import re
 import skia
 import numpy as np
+from src.video import VideoSource
+from src.models import VideoObject
 
 # Multiprocessing needs these at module level to be picklable, but who use cpu models anyway?
 worker_renderer: Optional[SkiaRenderer] = None
 
 
-def init_worker(engine: StateEngine, asset_path: str, width: int, height: int):
+def init_worker(
+    engine: StateEngine,
+    asset_path: str,
+    width: int,
+    height: int,
+    video_path: str | None = None,
+    video_object: VideoObject | None = None,
+):
     global worker_renderer
     assets_loader = AssetLoader(base_path=asset_path)
-    worker_renderer = SkiaRenderer(engine, assets_loader, width=width, height=height)
+    video_source = None
+    if video_path and os.path.isfile(video_path):
+        ffmpeg = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
+        )
+        video_source = VideoSource(video_path, ffmpeg_path=ffmpeg)
+    worker_renderer = SkiaRenderer(
+        engine,
+        assets_loader,
+        width=width,
+        height=height,
+        video_source=video_source,
+        video_object=video_object,
+    )
 
 
 def render_frame_worker(time_ms: int) -> bytes:
@@ -98,6 +121,13 @@ class RenderJob:
                 obj_end_time = obj.life_end
                 if obj_end_time > max_time:
                     max_time = obj_end_time
+
+        # Video playback extends the total duration
+        if storyboard.video is not None and self._video_source is not None:
+            video_end = storyboard.video.start_time + self._video_source.duration_ms
+            if video_end > max_time:
+                max_time = video_end
+
         return max_time
 
     def _build_ffmpeg_command(self) -> List[str]:
@@ -132,19 +162,57 @@ class RenderJob:
         return ffmpeg_cmd
 
     def start(self):
-        if not os.path.exists(self.osb_path):
+        # Parse storyboard events from the .osu file first.
+        # osu! renders .osu storyboard objects before .osb objects within
+        # each layer, so .osu forms the base and .osb is merged on top.
+        self.log_callback(
+            f"Parsing storyboard from .osu: {self.cfg.path.osu_path}", "INFO"
+        )
+        sb_parser = StoryboardParser()
+        try:
+            storyboard = sb_parser.parse(self.cfg.path.osu_path)
+        except Exception as e:
+            self.log_callback(f"Error parsing .osu storyboard: {e}", "ERROR")
+            return
+
+        if os.path.exists(self.osb_path):
             self.log_callback(
-                f"Error: OSB file '{self.osb_path}' does not exist.", "ERROR"
+                f"Parsing storyboard from .osb: {self.osb_path}", "INFO"
+            )
+            osb_parser = StoryboardParser()
+            try:
+                osb_storyboard = osb_parser.parse(self.osb_path)
+                storyboard.merge(osb_storyboard)
+            except Exception as e:
+                self.log_callback(f"Error parsing .osb storyboard: {e}", "ERROR")
+                return
+        else:
+            self.log_callback(
+                f"OSB file not found at '{self.osb_path}', using .osu events only.",
+                "WARNING",
+            )
+
+        if storyboard.is_empty():
+            self.log_callback(
+                "Error: No storyboard objects found in .osu or .osb file.", "ERROR"
             )
             return
 
-        self.log_callback(f"Parsing storyboard: {self.osb_path}", "INFO")
-        sb_parser = StoryboardParser()
-        try:
-            storyboard = sb_parser.parse(self.osb_path)
-        except Exception as e:
-            self.log_callback(f"Error parsing storyboard: {e}", "ERROR")
-            return
+        # Initialise video source if the .osu defines a video event
+        self._video_source: VideoSource | None = None
+        if storyboard.video is not None:
+            video_path = os.path.join(
+                self.base_path, storyboard.video.filepath
+            )
+            ffmpeg_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
+            )
+            self._video_source = VideoSource(video_path, ffmpeg_path=ffmpeg_path)
+            if not self._video_source.is_valid:
+                self.log_callback(
+                    f"Failed to load video: {video_path}", "WARNING"
+                )
 
         engine = StateEngine(storyboard)
         total_duration = self._get_video_duration(storyboard)
@@ -192,12 +260,15 @@ class RenderJob:
             f"Using GPU acceleration for rendering with {total_frames} frames.", "INFO"
         )
 
+        vo = engine.storyboard.video
         renderer = SkiaRendererGpu(
             engine,
             AssetLoader(base_path=self.base_path),
             self.cfg.renderer.width,
             self.cfg.renderer.height,
             self.cfg.renderer.sample_method,
+            video_source=self._video_source,
+            video_object=vo,
         )
         for i in range(total_frames):
             if self._stop_event.is_set():
@@ -226,6 +297,9 @@ class RenderJob:
 
         tasks = [int(i * 1000 / self.cfg.renderer.fps) for i in range(total_frames)]
 
+        vo = engine.storyboard.video
+        video_path = os.path.join(self.base_path, vo.filepath) if vo else None
+
         with multiprocessing.Pool(
             processes=cpu_count,
             initializer=init_worker,
@@ -234,6 +308,8 @@ class RenderJob:
                 self.base_path,
                 self.cfg.renderer.width,
                 self.cfg.renderer.height,
+                video_path,
+                vo,
             ),
         ) as pool:
             result_iter = pool.imap(render_frame_worker, tasks, chunksize=10)

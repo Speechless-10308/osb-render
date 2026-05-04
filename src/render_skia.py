@@ -4,9 +4,10 @@ import skia
 import math
 from typing import Tuple, Dict
 import numpy as np
-from src.models import Layer, Origin, ObjectState, Vector2
+from src.models import Layer, Origin, ObjectState, Vector2, VideoObject
 from src.state_engine import StateEngine
 from src.managers import AssetLoader
+from src.video import VideoSource
 import glfw
 
 
@@ -18,6 +19,8 @@ class SkiaRenderer:
         width: int = 1280,
         height: int = 720,
         method: str = "linear",
+        video_source: VideoSource | None = None,
+        video_object: VideoObject | None = None,
     ):
         self.engine = engine
         self.asset_loader = asset_loader
@@ -27,6 +30,10 @@ class SkiaRenderer:
             self.sample_method = skia.FilterMode.kNearest
         else:
             self.sample_method = skia.FilterMode.kLinear
+
+        # Video support
+        self.video_source = video_source
+        self.video_object = video_object
 
         # cache for skia images
         self.image_cache: Dict[str, skia.Image] = {}
@@ -74,11 +81,47 @@ class SkiaRenderer:
                 for bucket in range(start, end + 1):
                     self.layer_bucket[layer][bucket].append(obj)
 
+    def _draw_video(self, canvas: skia.Canvas, time_ms: int):
+        """Draw the current video frame, scaled to fill the output."""
+        if self.video_source is None or self.video_object is None:
+            return
+        if not self.video_source.is_valid:
+            return
+
+        video_time = time_ms - self.video_object.start_time
+        frame = self.video_source.get_frame(video_time)
+        if frame is None:
+            return
+
+        # Scale video uniformly to cover the output (like object-fit: cover)
+        vw, vh = self.video_source.width, self.video_source.height
+        if vw <= 0 or vh <= 0:
+            return
+
+        cover_scale = max(self.width / vw, self.height / vh)
+        draw_w = vw * cover_scale
+        draw_h = vh * cover_scale
+
+        # Centre the video on screen, then apply osu!-pixel offset
+        cx = (self.width - draw_w) / 2 + self.video_object.x_offset * self.scale_factor
+        cy = (self.height - draw_h) / 2 + self.video_object.y_offset * self.scale_factor
+
+        paint = skia.Paint()
+        paint.setAntiAlias(True)
+        sampling = skia.SamplingOptions(skia.FilterMode.kLinear)
+
+        dst_rect = skia.Rect(cx, cy, cx + draw_w, cy + draw_h)
+        canvas.drawImageRect(frame, dst_rect, sampling, paint)
+
     def draw_to_canvas(self, canvas: skia.Canvas, time_ms: int):
         """
         Draw the frame directly to a given Skia canvas
         """
         canvas.clear(skia.ColorBLACK)  # Black background
+
+        # Video renders on the background layer, behind everything
+        self._draw_video(canvas, time_ms)
+
         bucket_index = time_ms // 1000
         for layer in self.layer_names:
             active_objects = self.layer_bucket[layer][bucket_index]
@@ -198,8 +241,13 @@ class SkiaRendererGpu(SkiaRenderer):
         width: int = 1280,
         height: int = 720,
         method: str = "linear",
+        video_source: VideoSource | None = None,
+        video_object: VideoObject | None = None,
     ):
-        super().__init__(engine, asset_loader, width, height, method)
+        super().__init__(
+            engine, asset_loader, width, height, method,
+            video_source=video_source, video_object=video_object,
+        )
         self._init_gl_context()
 
     def _init_gl_context(self):

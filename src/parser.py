@@ -4,6 +4,7 @@ from src.models import (
     SBObject,
     Sprite,
     Animation,
+    VideoObject,
     Layer,
     Origin,
     Command,
@@ -64,6 +65,23 @@ class StoryboardParser:
 
     def _parse_object(self, parts: List[str]):
         object_type = parts[0].strip()
+
+        # Video events (only one per beatmap, but parse anyway)
+        if object_type in ("Video", "1"):
+            try:
+                start_time = int(parts[1].strip()) if len(parts) > 1 else 0
+                filepath = parts[2].strip().strip('"') if len(parts) > 2 else ""
+                x_offset = int(parts[3].strip()) if len(parts) > 3 else 0
+                y_offset = int(parts[4].strip()) if len(parts) > 4 else 0
+                self.storyboard.video = VideoObject(
+                    filepath=filepath,
+                    start_time=start_time,
+                    x_offset=x_offset,
+                    y_offset=y_offset,
+                )
+            except Exception as e:
+                print(f"Error parsing video event {parts}: {e}")
+            return
 
         if object_type not in ["Sprite", "Animation"]:
             return  # Unsupported object type

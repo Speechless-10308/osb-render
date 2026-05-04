@@ -133,12 +133,35 @@ class ObjectState:
 
 
 @dataclass
+class VideoObject:
+    """
+    Represents a video event in a .osu file's [Events] section.
+
+    Format: Video,<start_time>,"<filename>",<x_offset>,<y_offset>
+    The video is rendered on the Background layer, behind all sprites.
+    x_offset / y_offset shift the image from screen centre in osu! pixels.
+    """
+
+    filepath: str
+    start_time: int  # ms
+    x_offset: int = 0
+    y_offset: int = 0
+
+    def __str__(self):
+        return (
+            f"VideoObject(filepath='{self.filepath}', start_time={self.start_time}, "
+            f"offset=({self.x_offset},{self.y_offset}))\n"
+        )
+
+
+@dataclass
 class Storyboard:
     background_layer: List[SBObject] = field(default_factory=list)
     fail_layer: List[SBObject] = field(default_factory=list)
     pass_layer: List[SBObject] = field(default_factory=list)
     foreground_layer: List[SBObject] = field(default_factory=list)
     overlay_layer: List[SBObject] = field(default_factory=list)
+    video: Optional[VideoObject] = None
 
     def add_object(self, obj: SBObject):
         """
@@ -153,6 +176,34 @@ class Storyboard:
         }.get(obj.layer)
         if target_layer is not None:
             target_layer.append(obj)
+
+    def merge(self, other: "Storyboard") -> "Storyboard":
+        """
+        Merge another storyboard into this one.
+
+        Objects from *other* are appended AFTER this storyboard's objects
+        within each layer.  Since later objects draw on top, `other` renders
+        above *self* inside the same layer.  Layer ordering (Background <
+        Pass < Foreground < Overlay) is preserved.
+        """
+        self.background_layer.extend(other.background_layer)
+        self.fail_layer.extend(other.fail_layer)
+        self.pass_layer.extend(other.pass_layer)
+        self.foreground_layer.extend(other.foreground_layer)
+        self.overlay_layer.extend(other.overlay_layer)
+        # .osu owns the video; .osb shouldn't override it
+        if other.video is not None and self.video is None:
+            self.video = other.video
+        return self
+
+    def is_empty(self) -> bool:
+        return not any([
+            self.background_layer,
+            self.fail_layer,
+            self.pass_layer,
+            self.foreground_layer,
+            self.overlay_layer,
+        ]) and self.video is None
 
     def __str__(self):
         return f"Storyboard:\nBackground: {self.background_layer}\nFail: {self.fail_layer}\nPass: {self.pass_layer}\nForeground: {self.foreground_layer}\nOverlay: {self.overlay_layer}\n"

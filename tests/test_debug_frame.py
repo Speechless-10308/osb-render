@@ -15,13 +15,16 @@ from src.state_engine import StateEngine
 from src.parser import StoryboardParser
 from src.render_skia import SkiaRenderer, SkiaRendererGpu
 from src.managers import AssetLoader
+from src.video import VideoSource
 
 
 class DebugSkiaRenderer(SkiaRenderer):
     """Skia renderer that draws debug overlays: sprite filepaths, frame number, render time."""
 
-    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear"):
-        super().__init__(engine, asset_loader, width, height, method)
+    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear",
+                 video_source=None, video_object=None):
+        super().__init__(engine, asset_loader, width, height, method,
+                         video_source=video_source, video_object=video_object)
         self.render_time_ms = 0.0
 
         # Use a monospace font for legibility
@@ -31,6 +34,10 @@ class DebugSkiaRenderer(SkiaRenderer):
 
     def draw_to_canvas(self, canvas: skia.Canvas, time_ms: int):
         canvas.clear(skia.ColorBLACK)
+
+        # Video renders on the background layer, behind everything
+        self._draw_video(canvas, time_ms)
+
         bucket_index = time_ms // 1000
 
         # ---- first pass: draw all sprites, recording positions for labels ----
@@ -146,8 +153,10 @@ class DebugSkiaRenderer(SkiaRenderer):
 class DebugSkiaRendererGpu(DebugSkiaRenderer):
     """GPU-accelerated variant of the debug renderer."""
 
-    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear"):
-        super().__init__(engine, asset_loader, width, height, method)
+    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear",
+                 video_source=None, video_object=None):
+        super().__init__(engine, asset_loader, width, height, method,
+                         video_source=video_source, video_object=video_object)
         self._init_gl_context()
 
     def _init_gl_context(self):
@@ -209,16 +218,45 @@ def test_debug_frame(
     output: str = None,
     gpu: bool = False,
 ):
+    import re
+
     basepath = os.path.dirname(filepath)
 
     print(f"Parsing: {filepath}")
     parser = StoryboardParser()
     storyboard = parser.parse(filepath)
+
+    # If the input is a .osu file, also parse the companion .osb and merge.
+    if filepath.lower().endswith(".osu"):
+        filename = os.path.splitext(os.path.basename(filepath))[0]
+        filename = re.sub(r"\s*[\[\(][^\]\)]*[\]\)]\s*$", "", filename)
+        osb_path = os.path.join(basepath, filename + ".osb")
+        if os.path.exists(osb_path):
+            print(f"Parsing companion .osb: {osb_path}")
+            osb_parser = StoryboardParser()
+            osb_storyboard = osb_parser.parse(osb_path)
+            storyboard.merge(osb_storyboard)
+        else:
+            print(f"Companion .osb not found: {osb_path}")
+
     engine = StateEngine(storyboard)
     asset_loader = AssetLoader(base_path=basepath)
 
+    # Initialise video source if the storyboard defines a video
+    video_source = None
+    video_obj = storyboard.video
+    if video_obj is not None:
+        video_path = os.path.join(basepath, video_obj.filepath)
+        proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ffmpeg_path = os.path.join(
+            proj_root, "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+        )
+        video_source = VideoSource(video_path, ffmpeg_path=ffmpeg_path)
+        print(f"Video: {video_obj.filepath} ({video_source.width}x{video_source.height} {video_source.fps}fps {video_source.duration_ms}ms)")
+
     cls = DebugSkiaRendererGpu if gpu else DebugSkiaRenderer
-    renderer = cls(engine, asset_loader, width=width, height=height)
+    renderer = cls(engine, asset_loader, width, height,
+                   video_source=video_source, video_object=video_obj)
 
     print(f"Rendering at T={time_ms} ms ({width}x{height}, {'GPU' if gpu else 'CPU'}) ...")
     img = renderer.render_frame(time_ms)
