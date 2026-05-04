@@ -27,7 +27,7 @@ uv run tests/benchmark.py                              # CPU, 1920x1080 @ 60 fps
 uv run tests/benchmark.py --gpu --width 1280 --height 720 --fps 30
 
 # Build with Nuitka
-uv run nuitka app.py --standalone --enable-plugin=pyside6 --windows-console-mode=disable
+uv run nuitka app.py --standalone --enable-plugin=pyside6 --windows-console-mode=disable --include-data-dir=icons=icons --include-data-dir=themes=themes
 ```
 
 Python 3.13 via uv. No test framework installed -- tests are standalone scripts run directly (no pytest).
@@ -50,10 +50,23 @@ This app renders osu! storyboard files into video. The rendering pipeline: **.os
 
 ### GUI (`apps/`)
 
-- **[apps/main_window.py](apps/main_window.py)** — PySide6 `QMainWindow` with file selection, resolution/FPS/GPU controls, progress bar, log view
+- **[apps/main_window.py](apps/main_window.py)** — `MainWindow` orchestrator: frameless window with drop shadow, custom title bar, animated collapsible sidebar, QStackedWidget pages, render lifecycle, theme switching. Window drag and resize via CustomGrips.
+- **[apps/title_bar.py](apps/title_bar.py)** — `TitleBar(QFrame)` — custom title bar with sidebar toggle (hamburger), logo, title, theme toggle button, and window control buttons (minimize/maximize/close). Handles window dragging and double-click maximize.
+- **[apps/sidebar.py](apps/sidebar.py)** — `Sidebar(QFrame)` — collapsible left nav (200px ↔ 60px animated). 3 checkable page buttons (Home/Settings/About) in exclusive QButtonGroup. Emits `page_changed(int)` and `toggled(bool)`. QSS property `collapsed` controls icon-only mode.
+- **[apps/custom_grips.py](apps/custom_grips.py)** — `CustomGrip(QWidget)` — invisible edge resize handles for frameless window (ported from PyDracula, MIT).
 - **[apps/threads.py](apps/threads.py)** — `RenderThread` (QThread) runs `RenderJob` in background, bridges progress/log signals to GUI
-- **[apps/widgets.py](apps/widgets.py)** — `ResolutionWidget` with aspect-ratio-locked width/height spinboxes
-- **[apps/dialogs.py](apps/dialogs.py)** — `AdvancedSettingsDialog` for encoder preset, CRF, sampling method, audio toggle
+- **[apps/widgets.py](apps/widgets.py)** — `ResolutionWidget` with aspect-ratio-locked width/height spinboxes. All objectNames set for QSS targeting; no inline styles.
+- **[apps/pages/](apps/pages/)** — Page classes for the stacked widget:
+  - `home_page.py` — `HomePage`: 3-card layout (File Source, Parameters grid, Execution Monitor with collapsible console drawer). Console auto-expands on ERROR/WARNING logs.
+  - `settings_page.py` — `SettingsPage` with cards: FFmpeg Encoding (preset, CRF, sampling, pixel format, tuning, GOP, B-frames), Audio (codec, bitrate), Configuration (path changer, reset defaults). Auto-saves on any widget change.
+  - `about_page.py` — `AboutPage`: logo, version, project description, credits (static content)
+
+### Theming (`themes/`)
+
+- **[themes/osboard_dark.qss](themes/osboard_dark.qss)** — Dark Dracula-based QSS theme. All styling via objectName selectors.
+- **[themes/osboard_light.qss](themes/osboard_light.qss)** — Light theme: Background `#F8F9FA`, Cards `#FFFFFF`, Primary `#FF66AA`, Text `#2E354F`, Accent `#9D72FF`.
+- Runtime theme switching via title bar button. Preference persisted in `Config.app.theme`.
+- Zero inline `setStyleSheet()` calls in Python.
 
 ### Tests (`tests/`)
 
@@ -69,7 +82,7 @@ This app renders osu! storyboard files into video. The rendering pipeline: **.os
 ### Entry points
 
 - **[main.py](main.py)** — CLI with argparse, creates `Config` from YAML + CLI overrides, runs `RenderJob` with tqdm progress bar
-- **[app.py](app.py)** — PySide6 QApplication bootstrap, creates `MainWindow`
+- **[app.py](app.py)** — PySide6 QApplication bootstrap, loads initial QSS theme, creates `MainWindow`
 - **[pyproject.toml](pyproject.toml)** — Project metadata, depends on glfw, loguru, nuitka, pydantic, pyside6, pyyaml, skia-python, tqdm. Python >=3.13.
 
 ### Other
@@ -80,6 +93,7 @@ This app renders osu! storyboard files into video. The rendering pipeline: **.os
 
 ## Key design notes
 
+- **Frameless window**: Uses `Qt.FramelessWindowHint` + `Qt.WA_TranslucentBackground`. Custom title bar handles dragging and window controls. `QGraphicsDropShadowEffect` on `#bgApp` provides the shadow. `CustomGrip` widgets on all 4 edges handle resizing.
 - **.osu + .osb merge order**: `.osu` `[Events]` are parsed first, then `.osb` is merged on top. Within each layer, `.osu` objects come first (rendered behind), `.osb` objects are appended after (rendered on top). Layer hierarchy (Background < Fail < Pass < Foreground < Overlay) is preserved across both files.
 - The renderer uses a **time-bucketing optimization**: objects are pre-bucketed into 1-second intervals so each frame only iterates active objects
 - osu! uses a 640x480 coordinate system; the renderer scales to output resolution using `height / 480.0` as the scale factor, centering horizontally with an x-offset

@@ -1,42 +1,12 @@
 from PySide6.QtWidgets import (
     QWidget,
-    QSizePolicy,
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
     QSpinBox,
     QToolButton,
 )
-from PySide6.QtGui import QPainter, QPen, QColor
 from PySide6.QtCore import Qt
-
-
-class BracketWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.setFixedWidth(15)
-        # self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        pen = QPen(QColor("#636363"))
-        pen.setWidth(2)
-        painter.setPen(pen)
-
-        rect = self.rect()
-        w = rect.width()
-        h = rect.height()
-
-        margin_top = 25
-        margin_bottom = 25
-
-        # Draw ]
-        painter.drawLine(0, margin_top, w, margin_top)
-        painter.drawLine(w, margin_top, w, h - margin_bottom)
-        painter.drawLine(w, h - margin_bottom, 0, h - margin_bottom)
 
 
 class ResolutionWidget(QWidget):
@@ -51,12 +21,16 @@ class ResolutionWidget(QWidget):
     def init_ui(self):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
 
         input_layout = QVBoxLayout()
+        input_layout.setSpacing(8)
 
         width_row = QHBoxLayout()
+        width_row.setSpacing(8)
         w_label = QLabel("Width")
         self.width_spin = QSpinBox()
+        self.width_spin.setObjectName("resSpinBox")
         self.width_spin.setRange(100, 7680)
         self.width_spin.setValue(self.output_width)
         self.width_spin.valueChanged.connect(self.on_width_changed)
@@ -64,8 +38,10 @@ class ResolutionWidget(QWidget):
         width_row.addWidget(self.width_spin)
 
         height_row = QHBoxLayout()
+        height_row.setSpacing(8)
         h_label = QLabel("Height")
         self.height_spin = QSpinBox()
+        self.height_spin.setObjectName("resSpinBox")
         self.height_spin.setRange(100, 4320)
         self.height_spin.setValue(self.output_height)
         self.height_spin.valueChanged.connect(self.on_height_changed)
@@ -75,36 +51,16 @@ class ResolutionWidget(QWidget):
         input_layout.addLayout(width_row)
         input_layout.addLayout(height_row)
 
-        # middle_layout = QVBoxLayout()
-        # self.bracket = BracketWidget()
-        # middle_layout.addWidget(self.bracket)
-
         self.link_btn = QToolButton()
-        self.link_btn.setText("🔗")
+        self.link_btn.setObjectName("linkBtn")
+        self.link_btn.setText("\U0001F517")
         self.link_btn.setCheckable(True)
         self.link_btn.setChecked(True)
         self.link_btn.setToolTip("Lock Aspect Ratio")
         self.link_btn.toggled.connect(self.on_link_toggled)
-
-        self.link_btn.setStyleSheet(
-            """
-            QToolButton {
-                color: #666;
-                font-size: 16px;
-                border-radius: 4px;
-            }
-            QToolButton:checked {
-                background-color: #333;
-            }
-            QToolButton:hover {
-                background-color: #666;  
-            } 
-            """
-        )
         self.link_btn.setCursor(Qt.PointingHandCursor)
 
         layout.addLayout(input_layout)
-        # layout.addLayout(middle_layout)
         layout.addWidget(self.link_btn)
 
     def on_link_toggled(self, checked: bool):

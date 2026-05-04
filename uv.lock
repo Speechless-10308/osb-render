@@ -113,8 +113,8 @@ wheels = [
 ]
 
 [[package]]
-name = "osb-render"
-version = "0.0.2"
+name = "osboard"
+version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "glfw" },

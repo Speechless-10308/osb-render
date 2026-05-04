@@ -7,6 +7,8 @@ from loguru import logger
 
 class AppConfig(BaseModel):
     last_open_dir: str = "."
+    theme: str = "dark"  # "dark" or "light"
+    config_dir: str = ""  # empty = use default platform location
 
 
 class RendererConfig(BaseModel):
@@ -18,6 +20,12 @@ class RendererConfig(BaseModel):
     use_gpu: bool = True
     sample_method: str = "linear"
     enable_audio: bool = True
+    pixel_format: str = "yuv420p"
+    gop_size: int = 12
+    b_frames: int = 2
+    preset_tuning: str = "default"
+    audio_bitrate: str = "192k"
+    audio_codec: str = "aac"
 
 
 class PathConfig(BaseModel):
