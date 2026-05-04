@@ -198,14 +198,17 @@ class DebugSkiaRendererGpu(DebugSkiaRenderer):
         return self.surface.makeImageSnapshot()
 
     def __del__(self):
+        self.close()
+
+    def close(self):
         try:
             if hasattr(self, "window") and self.window:
                 import glfw
                 glfw.destroy_window(self.window)
+                self.window = None
             if hasattr(self, "context") and self.context:
                 self.context.abandonContext()
-            import glfw
-            glfw.terminate()
+                self.context = None
         except Exception:
             pass
 

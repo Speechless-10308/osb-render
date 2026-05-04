@@ -211,6 +211,10 @@ class SkiaRenderer:
 
         return surface.makeImageSnapshot()
 
+    def close(self):
+        """Release resources (no-op for CPU renderer)."""
+        pass
+
     def _get_origin_offset(self, w: int, h: int, origin: Origin) -> Tuple[float, float]:
         if origin == Origin.TopLeft:
             return 0, 0
@@ -304,10 +308,12 @@ class SkiaRendererGpu(SkiaRenderer):
         return self.surface.makeImageSnapshot()
 
     def __del__(self):
+        self.close()
+
+    def close(self):
         if hasattr(self, "window") and self.window:
             glfw.destroy_window(self.window)
-
+            self.window = None
         if hasattr(self, "context") and self.context:
             self.context.abandonContext()
-
-        glfw.terminate()
+            self.context = None
