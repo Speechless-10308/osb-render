@@ -1,8 +1,10 @@
-<h1 align="center">Osb Render</h1>  
-A simple osb render with lots of bugs and latency...
+<h1 align="center">OSBoard</h1>  
+A high-performance osu! storyboard renderer — convert beatmap storyboards into MP4 videos.
+
+![The Logo](logo.png)
 
 ## How to use?
-![The GUI Pic](assets/image.png)
+
 
 1. Select your `.osu` file (yes plz `.osu` file), then it will automatically detect audios and the storyboard.
 2. Select a folder to save the output video via the "Save As" button. 

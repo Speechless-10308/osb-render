@@ -1,7 +1,7 @@
 [project]
-name = "osb-render"
-version = "0.0.3"
-description = "A simple osb render which convert the osu! storyboard into video."
+name = "osboard"
+version = "0.1.0"
+description = "OSBoard — A high-performance osu! storyboard to MP4 renderer."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
