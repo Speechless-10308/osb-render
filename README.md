@@ -1,7 +1,7 @@
 <h1 align="center">OSBoard</h1>  
 A high-performance osu! storyboard renderer — convert beatmap storyboards into MP4 videos.
 
-![The Logo](banner.png)
+![The Logo](assets/banner.png)
 
 ## How to use?
 
