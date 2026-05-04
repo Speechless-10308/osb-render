@@ -34,7 +34,7 @@ Note that it is **osu_path**, the program will automatically detect the existenc
 
 ## Benchmark
 
-Run the benchmark against the reference beatmap set:
+Run the benchmark against the reference beatmap set (you need to add it first):
 
 ```shell
 # CPU (default 1920x1080 @ 60 fps)
@@ -51,7 +51,7 @@ Results are printed to the console and also written to `bench_results.md`.
 
 ### Reference Results
 
-Here I provide a benchmark result of the reference beatmap set on my machine (Ryzen 7 9600 + RTX 5060). Note that the render time may vary a lot on different machines and configurations, so please run the benchmark yourself to get a more accurate result.
+Here I provide a benchmark result of the reference beatmap set on my machine (Ryzen 5 9600 + RTX 5060). Note that the render time may vary a lot on different machines and configurations, so please run the benchmark yourself to get a more accurate result.
 
 | Beatmap | Duration | Resolution | FPS | Render Time |
 | :-- | :-- | :-- | :-- | :-- |
