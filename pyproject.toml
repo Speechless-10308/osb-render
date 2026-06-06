@@ -14,3 +14,20 @@ dependencies = [
     "skia-python>=138.0",
     "tqdm>=4.67.1",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+# Old test files are standalone scripts (not pytest-compatible)
+norecursedirs = []
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

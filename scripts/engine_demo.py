@@ -72,13 +72,13 @@ _F,0,2000,4000,1,0,1,0
 """
 
     # 写入临时文件
-    with open("tests/test_temp.osb", "w") as f:
+    with open("test_temp.osb", "w") as f:
         f.write(file_content)
 
     from src.parser import StoryboardParser
 
     parser = StoryboardParser()
-    sb = parser.parse("tests/test_temp.osb")
+    sb = parser.parse("test_temp.osb")
     engine = StateEngine(sb)
     obj = sb.background_layer[0]
     print(f"Parsed Object Commands Count: {len(obj.commands)}")
@@ -102,7 +102,7 @@ _F,0,2000,4000,1,0,1,0
     import os
 
     try:
-        os.remove("tests/test_temp.osb")
+        os.remove("test_temp.osb")
     except:
         pass
 

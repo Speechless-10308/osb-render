@@ -17,10 +17,13 @@ uv run main.py [osu_path] -o [output_path] --width 1920 --height 1080 --gpu
 # Run GUI
 uv run app.py
 
-# Run tests
-uv run tests/test_engine.py         # StateEngine: construction, parser integration, real storyboard
-uv run tests/test_canvas.py         # Renderer: frame rendering via PIL, Skia CPU, Skia GPU
-uv run tests/test_debug_frame.py    # Single-frame debug render with sprite labels + render time overlay
+# Run tests (pytest)
+uv run pytest tests/ -v
+
+# Run demo/debug scripts (standalone, non-pytest)
+uv run scripts/engine_demo.py         # StateEngine: construction, parser integration, real storyboard
+uv run scripts/canvas_demo.py         # Renderer: frame rendering via PIL, Skia CPU, Skia GPU
+uv run scripts/debug_frame_demo.py    # Single-frame debug render with sprite labels + render time overlay
 
 # Benchmark
 uv run tests/benchmark.py                              # CPU, 1920x1080 @ 60 fps
@@ -30,7 +33,7 @@ uv run tests/benchmark.py --gpu --width 1280 --height 720 --fps 30
 uv run nuitka app.py --standalone --enable-plugin=pyside6 --windows-console-mode=disable --include-data-dir=icons=icons --include-data-dir=themes=themes
 ```
 
-Python 3.13 via uv. No test framework installed -- tests are standalone scripts run directly (no pytest).
+Python 3.13 via uv. Tests use pytest; demo scripts live in `scripts/`.
 
 ## Architecture
 
@@ -70,9 +73,23 @@ This app renders osu! storyboard files into video. The rendering pipeline: **.os
 
 ### Tests (`tests/`)
 
-- **[tests/test_engine.py](tests/test_engine.py)** — StateEngine unit tests (manual construction, parser integration, real storyboard)
-- **[tests/test_canvas.py](tests/test_canvas.py)** — Renderer tests: single-frame rendering via PIL, Skia CPU, Skia GPU
-- **[tests/test_debug_frame.py](tests/test_debug_frame.py)** — Renders a single frame with debug overlays: sprite filepath labels at each sprite's origin, frame timestamp, and render time. Supports `--gpu` and custom resolution. Automatically locates and merges companion `.osb` when given a `.osu` file.
+Pytest-based unit tests (220 tests across 7 files):
+
+- **[tests/test_models.py](tests/test_models.py)** — `Vector2` arithmetic, enums, `Command`/`LoopCommand`/`SBObject`/`Sprite`/`Animation`/`ObjectState`/`VideoObject` construction, `Storyboard` layer routing, merge, and emptiness checks
+- **[tests/test_easings.py](tests/test_easings.py)** — All 35 easing functions (0–34): boundary values, clamping, known midpoints, in/out monotonicity, in-out symmetry, dispatch table coverage
+- **[tests/test_config.py](tests/test_config.py)** — `Config` defaults, `from_yaml()` for valid/partial/missing files, `to_yaml()` round-trip, parent directory creation
+- **[tests/test_parser.py](tests/test_parser.py)** — `StoryboardParser`: file errors, comments/blanks, sprite/animation parsing, video events, all command types, shorthand expansion (start-only, multi-segment, insufficient params), loops, triggers (ignored), `[Variables]` substitution, indent handling, error recovery
+- **[tests/test_state_engine.py](tests/test_state_engine.py)** — `StateEngine`: lifetime calculation, visibility gating, fade/move/scale/rotation/color interpolation, P commands (flip/additive), loop iteration/wrap-around, command category deduplication, animation frames (loop-forever/loop-once), parser+engine integration
+- **[tests/test_managers.py](tests/test_managers.py)** — `AssetLoader`: path normalization, image caching, missing-file/error fallback to 1×1 transparent placeholder
+- **[tests/test_video.py](tests/test_video.py)** — `VideoSource`: metadata initialisation, `is_valid` gating, frame index calculation, ffmpeg probe regex parsing, close behaviour
+
+### Demo scripts (`scripts/`)
+
+Standalone scripts for manual testing and visual debugging (run directly, not via pytest):
+
+- **[scripts/engine_demo.py](scripts/engine_demo.py)** — StateEngine manual construction, parser integration, real storyboard rendering
+- **[scripts/canvas_demo.py](scripts/canvas_demo.py)** — Single-frame rendering via PIL, Skia CPU, Skia GPU
+- **[scripts/debug_frame_demo.py](scripts/debug_frame_demo.py)** — Renders a single frame with debug overlays: sprite filepath labels, frame timestamp, and render time. Supports `--gpu` and custom resolution. Auto-locates companion `.osb` when given a `.osu` file.
 - **[tests/benchmark.py](tests/benchmark.py)** — End-to-end benchmark: parses + renders a list of beatmaps, prints a Markdown results table. Add beatmap paths to the `BEATMAPS` list, then run with `--width`, `--height`, `--fps`, `--gpu` flags.
 
 ### Config
