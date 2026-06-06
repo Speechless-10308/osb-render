@@ -5,7 +5,6 @@ and render time overlaid on the output image.
 import os
 import sys
 import time
-import math
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -26,76 +25,23 @@ class DebugSkiaRenderer(SkiaRenderer):
         super().__init__(engine, asset_loader, width, height, method,
                          video_source=video_source, video_object=video_object)
         self.render_time_ms = 0.0
+        self._label_entries = []  # collected during _draw_sprite
 
         # Use a monospace font for legibility
         typeface = skia.Typeface("Consolas") or skia.Typeface("Courier New") or skia.Typeface()
         self.debug_font = skia.Font(typeface, 11)
         self.info_font = skia.Font(typeface, 16)
 
+    def _draw_sprite(self, canvas, obj, state, img):
+        """Draw the sprite and record its screen position for the debug overlay."""
+        final_x, final_y = super()._draw_sprite(canvas, obj, state, img)
+        self._label_entries.append((obj.filepath, final_x, final_y))
+
     def draw_to_canvas(self, canvas: skia.Canvas, time_ms: int):
-        canvas.clear(skia.ColorBLACK)
-
-        # Video renders on the background layer, behind everything
-        self._draw_video(canvas, time_ms)
-
-        bucket_index = time_ms // 1000
-
-        # ---- first pass: draw all sprites, recording positions for labels ----
-        label_entries = []  # (filepath, screen_x, screen_y)
-
-        for layer in self.layer_names:
-            for obj in self.layer_bucket[layer][bucket_index]:
-                state = self.engine.get_object_state(obj, time_ms)
-
-                if not state or not state.visible or state.opacity < 0.001:
-                    continue
-                if abs(state.scale_vec.x) < 0.001 and abs(state.scale_vec.y) < 0.001:
-                    continue
-
-                img = self.asset_loader.load_image(state.image_path)
-                if img is None:
-                    continue
-
-                canvas.save()
-
-                final_x = self.offset_x + state.position.x * self.scale_factor
-                final_y = self.offset_y + state.position.y * self.scale_factor
-                canvas.translate(final_x, final_y)
-
-                if abs(state.rotation) > 0.0001:
-                    canvas.rotate(math.degrees(state.rotation))
-
-                sx = state.scale_vec.x * self.scale_factor
-                sy = state.scale_vec.y * self.scale_factor
-                if state.flip_h:
-                    sx = -sx
-                if state.flip_v:
-                    sy = -sy
-                canvas.scale(sx, sy)
-
-                paint = skia.Paint()
-                paint.setAlpha(int(state.opacity * 255))
-                if state.additive:
-                    paint.setBlendMode(skia.BlendMode.kPlus)
-                if state.r != 255 or state.g != 255 or state.b != 255:
-                    color = skia.Color(int(state.r), int(state.g), int(state.b))
-                    paint.setColorFilter(skia.ColorFilters.Blend(color, skia.BlendMode.kModulate))
-                paint.setAntiAlias(True)
-
-                sampling = skia.SamplingOptions(self.sample_method)
-                w, h = img.width(), img.height()
-                ox, oy = self._get_origin_offset(w, h, obj.origin)
-                if state.flip_h:
-                    ox = w - ox
-                if state.flip_v:
-                    oy = h - oy
-                canvas.drawImage(img, -ox, -oy, sampling, paint)
-                canvas.restore()
-
-                label_entries.append((obj.filepath, final_x, final_y))
-
-        # ---- second pass: draw debug overlays ----
-        self._draw_sprite_labels(canvas, label_entries)
+        """Draw the frame via the base renderer, then overlay debug info."""
+        self._label_entries = []
+        super().draw_to_canvas(canvas, time_ms)
+        self._draw_sprite_labels(canvas, self._label_entries)
         self._draw_frame_info(canvas, time_ms)
 
     def _draw_sprite_labels(self, canvas, entries):

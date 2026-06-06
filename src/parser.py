@@ -28,11 +28,27 @@ class StoryboardParser:
         with open(filepath, "r", encoding="utf-8") as file:
             lines = file.readlines()
 
+        # First pass: collect [Variables] section entries
+        # Format: $varname=value1,value2,...
+        variables = {}
+        is_variables_section = False
+        for line in lines:
+            line = line.rstrip()
+            if not line or line.startswith("//"):
+                continue
+            if line.startswith("["):
+                is_variables_section = (line == "[Variables]")
+                continue
+            if is_variables_section and "=" in line:
+                name, value = line.split("=", 1)
+                variables[name.strip()] = value.strip()
+
+        # Second pass: parse [Events] section
         is_events_section = False
         for line in lines:
             line = line.rstrip()
 
-            if not line and line.startswith("//"):
+            if not line or line.startswith("//"):
                 continue  # Skip empty lines and comments
 
             if line.startswith("["):
@@ -43,6 +59,10 @@ class StoryboardParser:
                 continue
 
             if is_events_section:
+                # Substitute $variable references before parsing
+                if variables:
+                    for name, value in variables.items():
+                        line = line.replace(name, value)
                 self._parse_line(line)
 
         return self.storyboard

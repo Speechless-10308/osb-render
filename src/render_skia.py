@@ -113,6 +113,71 @@ class SkiaRenderer:
         dst_rect = skia.Rect(cx, cy, cx + draw_w, cy + draw_h)
         canvas.drawImageRect(frame, dst_rect, sampling, paint)
 
+    def _draw_sprite(self, canvas: skia.Canvas, obj, state, img: skia.Image):
+        """Draw a single sprite to the canvas with all transforms applied.
+
+        Returns the screen-space (x, y) position of the sprite's origin,
+        useful for subclasses that need to overlay debug info.
+        """
+        canvas.save()
+
+        final_x = self.offset_x + state.position.x * self.scale_factor
+        final_y = self.offset_y + state.position.y * self.scale_factor
+        canvas.translate(final_x, final_y)
+
+        # Handle rotation
+        if abs(state.rotation) > 0.0001:
+            degrees = math.degrees(state.rotation)
+            canvas.rotate(degrees)
+
+        # handle scaling and flipping
+        sx = state.scale_vec.x * self.scale_factor
+        sy = state.scale_vec.y * self.scale_factor
+
+        if state.flip_h:
+            sx = -sx
+        if state.flip_v:
+            sy = -sy
+
+        canvas.scale(sx, sy)
+
+        paint = skia.Paint()
+        # Opacity (0-255)
+        paint.setAlpha(int(state.opacity * 255))
+
+        # Additive Blending (Additive)
+        if state.additive:
+            paint.setBlendMode(skia.BlendMode.kPlus)
+
+        # Color Tinting
+        # osu! uses Multiply mode for tinting
+        if state.r != 255 or state.g != 255 or state.b != 255:
+            color = skia.Color(int(state.r), int(state.g), int(state.b))
+            paint.setColorFilter(
+                skia.ColorFilters.Blend(color, skia.BlendMode.kModulate)
+            )
+
+        paint.setAntiAlias(True)
+        sampling = skia.SamplingOptions(self.sample_method)
+
+        w, h = img.width(), img.height()
+        ox, oy = self._get_origin_offset(w, h, obj.origin)
+
+        # When flipped, the negative scale mirrors the local coordinate
+        # system. Adjust the draw offset so the visual bounding box
+        # stays on the same side of the origin — only the content flips.
+        if state.flip_h:
+            ox = w - ox
+        if state.flip_v:
+            oy = h - oy
+
+        canvas.drawImage(img, -ox, -oy, sampling, paint)
+
+        # Restore the coordinate system state for the next object
+        canvas.restore()
+
+        return final_x, final_y
+
     def draw_to_canvas(self, canvas: skia.Canvas, time_ms: int):
         """
         Draw the frame directly to a given Skia canvas
@@ -138,62 +203,7 @@ class SkiaRenderer:
                 if img is None:
                     continue
 
-                canvas.save()
-
-                final_x = self.offset_x + state.position.x * self.scale_factor
-                final_y = self.offset_y + state.position.y * self.scale_factor
-                canvas.translate(final_x, final_y)
-
-                # Handle rotation
-                if abs(state.rotation) > 0.0001:
-                    degrees = math.degrees(state.rotation)
-                    canvas.rotate(degrees)
-
-                # handle scaling and flipping
-                sx = state.scale_vec.x * self.scale_factor
-                sy = state.scale_vec.y * self.scale_factor
-
-                if state.flip_h:
-                    sx = -sx
-                if state.flip_v:
-                    sy = -sy
-
-                canvas.scale(sx, sy)
-
-                paint = skia.Paint()
-                # Opacity (0-255)
-                paint.setAlpha(int(state.opacity * 255))
-
-                # Additive Blending (Additive)
-                if state.additive:
-                    paint.setBlendMode(skia.BlendMode.kPlus)
-
-                # Color Tinting
-                # osu! uses Multiply mode for tinting
-                if state.r != 255 or state.g != 255 or state.b != 255:
-                    color = skia.Color(int(state.r), int(state.g), int(state.b))
-                    paint.setColorFilter(
-                        skia.ColorFilters.Blend(color, skia.BlendMode.kModulate)
-                    )
-
-                paint.setAntiAlias(True)
-                sampling = skia.SamplingOptions(self.sample_method)
-
-                w, h = img.width(), img.height()
-                ox, oy = self._get_origin_offset(w, h, obj.origin)
-
-                # When flipped, the negative scale mirrors the local coordinate
-                # system. Adjust the draw offset so the visual bounding box
-                # stays on the same side of the origin — only the content flips.
-                if state.flip_h:
-                    ox = w - ox
-                if state.flip_v:
-                    oy = h - oy
-
-                canvas.drawImage(img, -ox, -oy, sampling, paint)
-
-                # Restore the coordinate system state for the next object
-                canvas.restore()
+                self._draw_sprite(canvas, obj, state, img)
 
     def render_frame(self, time_ms: int) -> skia.Image:
         """

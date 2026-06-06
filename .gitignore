@@ -11,6 +11,9 @@ app.dist
 # Virtual environments
 .venv
 
+# uv lock file (platform-specific)
+uv.lock
+
 # FFmpeg
 ffmpeg.*
 
