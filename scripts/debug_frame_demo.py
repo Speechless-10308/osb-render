@@ -2,6 +2,7 @@
 Debug test: render a single frame with sprite filepath labels, frame number,
 and render time overlaid on the output image.
 """
+
 import os
 import sys
 import time
@@ -20,15 +21,32 @@ from src.video import VideoSource
 class DebugSkiaRenderer(SkiaRenderer):
     """Skia renderer that draws debug overlays: sprite filepaths, frame number, render time."""
 
-    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear",
-                 video_source=None, video_object=None):
-        super().__init__(engine, asset_loader, width, height, method,
-                         video_source=video_source, video_object=video_object)
+    def __init__(
+        self,
+        engine,
+        asset_loader,
+        width=1920,
+        height=1080,
+        method="linear",
+        video_source=None,
+        video_object=None,
+    ):
+        super().__init__(
+            engine,
+            asset_loader,
+            width,
+            height,
+            method,
+            video_source=video_source,
+            video_object=video_object,
+        )
         self.render_time_ms = 0.0
         self._label_entries = []  # collected during _draw_sprite
 
         # Use a monospace font for legibility
-        typeface = skia.Typeface("Consolas") or skia.Typeface("Courier New") or skia.Typeface()
+        typeface = (
+            skia.Typeface("Consolas") or skia.Typeface("Courier New") or skia.Typeface()
+        )
         self.debug_font = skia.Font(typeface, 11)
         self.info_font = skia.Font(typeface, 16)
 
@@ -41,7 +59,7 @@ class DebugSkiaRenderer(SkiaRenderer):
         """Draw the frame via the base renderer, then overlay debug info."""
         self._label_entries = []
         super().draw_to_canvas(canvas, time_ms)
-        self._draw_sprite_labels(canvas, self._label_entries)
+        # self._draw_sprite_labels(canvas, self._label_entries)
         self._draw_frame_info(canvas, time_ms)
 
     def _draw_sprite_labels(self, canvas, entries):
@@ -78,8 +96,10 @@ class DebugSkiaRenderer(SkiaRenderer):
     def render_frame(self, time_ms: int) -> skia.Image:
         surface = skia.Surface.MakeRaster(
             skia.ImageInfo.Make(
-                self.width, self.height,
-                skia.kRGBA_8888_ColorType, skia.kPremul_AlphaType,
+                self.width,
+                self.height,
+                skia.kRGBA_8888_ColorType,
+                skia.kPremul_AlphaType,
             )
         )
 
@@ -99,14 +119,30 @@ class DebugSkiaRenderer(SkiaRenderer):
 class DebugSkiaRendererGpu(DebugSkiaRenderer):
     """GPU-accelerated variant of the debug renderer."""
 
-    def __init__(self, engine, asset_loader, width=1920, height=1080, method="linear",
-                 video_source=None, video_object=None):
-        super().__init__(engine, asset_loader, width, height, method,
-                         video_source=video_source, video_object=video_object)
+    def __init__(
+        self,
+        engine,
+        asset_loader,
+        width=1920,
+        height=1080,
+        method="linear",
+        video_source=None,
+        video_object=None,
+    ):
+        super().__init__(
+            engine,
+            asset_loader,
+            width,
+            height,
+            method,
+            video_source=video_source,
+            video_object=video_object,
+        )
         self._init_gl_context()
 
     def _init_gl_context(self):
         import glfw
+
         if not glfw.init():
             raise RuntimeError("GLFW init failed")
         glfw.window_hint(glfw.VISIBLE, False)
@@ -120,14 +156,20 @@ class DebugSkiaRendererGpu(DebugSkiaRenderer):
         if not self.context:
             raise RuntimeError("Skia GrDirectContext creation failed")
         info = skia.ImageInfo.Make(
-            self.width, self.height, skia.kRGBA_8888_ColorType, skia.kPremul_AlphaType,
+            self.width,
+            self.height,
+            skia.kRGBA_8888_ColorType,
+            skia.kPremul_AlphaType,
         )
-        self.surface = skia.Surface.MakeRenderTarget(self.context, skia.Budgeted.kNo, info)
+        self.surface = skia.Surface.MakeRenderTarget(
+            self.context, skia.Budgeted.kNo, info
+        )
         if not self.surface:
             raise RuntimeError("GPU surface creation failed")
 
     def render_frame(self, time_ms: int) -> skia.Image:
         import glfw
+
         glfw.make_context_current(self.window)
 
         st = time.perf_counter()
@@ -150,6 +192,7 @@ class DebugSkiaRendererGpu(DebugSkiaRenderer):
         try:
             if hasattr(self, "window") and self.window:
                 import glfw
+
                 glfw.destroy_window(self.window)
                 self.window = None
             if hasattr(self, "context") and self.context:
@@ -201,13 +244,23 @@ def test_debug_frame(
             proj_root, "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
         )
         video_source = VideoSource(video_path, ffmpeg_path=ffmpeg_path)
-        print(f"Video: {video_obj.filepath} ({video_source.width}x{video_source.height} {video_source.fps}fps {video_source.duration_ms}ms)")
+        print(
+            f"Video: {video_obj.filepath} ({video_source.width}x{video_source.height} {video_source.fps}fps {video_source.duration_ms}ms)"
+        )
 
     cls = DebugSkiaRendererGpu if gpu else DebugSkiaRenderer
-    renderer = cls(engine, asset_loader, width, height,
-                   video_source=video_source, video_object=video_obj)
+    renderer = cls(
+        engine,
+        asset_loader,
+        width,
+        height,
+        video_source=video_source,
+        video_object=video_obj,
+    )
 
-    print(f"Rendering at T={time_ms} ms ({width}x{height}, {'GPU' if gpu else 'CPU'}) ...")
+    print(
+        f"Rendering at T={time_ms} ms ({width}x{height}, {'GPU' if gpu else 'CPU'}) ..."
+    )
     img = renderer.render_frame(time_ms)
 
     if output is None:
@@ -223,9 +276,13 @@ def test_debug_frame(
 if __name__ == "__main__":
     import argparse
 
-    ap = argparse.ArgumentParser(description="Render a single debug frame with overlays")
+    ap = argparse.ArgumentParser(
+        description="Render a single debug frame with overlays"
+    )
     ap.add_argument("osb_path", help="Path to .osb (or .osu) file")
-    ap.add_argument("-t", "--time", type=int, default=0, help="Timestamp in ms to render")
+    ap.add_argument(
+        "-t", "--time", type=int, default=0, help="Timestamp in ms to render"
+    )
     ap.add_argument("-W", "--width", type=int, default=1920)
     ap.add_argument("-H", "--height", type=int, default=1080)
     ap.add_argument("-o", "--output", default=None, help="Output PNG path")

@@ -157,10 +157,23 @@ class SkiaRenderer:
                 skia.ColorFilters.Blend(color, skia.BlendMode.kModulate)
             )
 
-        paint.setAntiAlias(True)
-        sampling = skia.SamplingOptions(self.sample_method)
-
         w, h = img.width(), img.height()
+
+        # Geometric anti-aliasing on axis-aligned sprite edges causes
+        # visible dark seams when two sprites share a boundary at a
+        # sub-pixel screen coordinate — their independent AA coverage
+        # doesn't sum to 100 %.  Since axis-aligned edges are already
+        # straight pixel lines, geometric AA provides no benefit; the
+        # texture's own alpha channel and bilinear sampling handle
+        # in-content smoothness.  Only rotated sprites need AA for
+        # their angled edges.
+        # osu! itself uses MSAA at the framebuffer level (all
+        # primitives resolved together), not per-sprite geometric AA,
+        # so this also matches the client's visual output.
+        has_rotation = abs(state.rotation) > 0.0001
+        paint.setAntiAlias(has_rotation)
+
+        sampling = skia.SamplingOptions(self.sample_method)
         ox, oy = self._get_origin_offset(w, h, obj.origin)
 
         # When flipped, the negative scale mirrors the local coordinate
