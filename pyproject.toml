@@ -1,6 +1,6 @@
 [project]
 name = "osboard"
-version = "0.1.0"
+version = "0.1.1"
 description = "OSBoard — A high-performance osu! storyboard to MP4 renderer."
 readme = "README.md"
 requires-python = ">=3.13"
