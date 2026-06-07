@@ -41,7 +41,7 @@ class AboutPage(QWidget):
         layout.addWidget(title)
 
         # Version
-        version = QLabel("v0.1.0")
+        version = QLabel("v0.1.1")
         version.setObjectName("aboutDescription")
         version.setAlignment(Qt.AlignCenter)
         layout.addWidget(version)
