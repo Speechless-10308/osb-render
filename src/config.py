@@ -26,6 +26,7 @@ class RendererConfig(BaseModel):
     preset_tuning: str = "default"
     audio_bitrate: str = "192k"
     audio_codec: str = "aac"
+    ffmpeg_path: str = ""  # empty = auto-detect: PATH first, then bundled fallback
 
 
 class PathConfig(BaseModel):

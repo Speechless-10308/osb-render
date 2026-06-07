@@ -1,0 +1,219 @@
+/* ============================================================
+   OSBoard — Components
+   ============================================================ */
+
+/* Card — consistent gap across pages */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 22px;
+  box-shadow: var(--shadow-card);
+  flex-shrink: 0;
+}
+/* Settings page cards: same spacing as home page flex gap */
+#page-settings .card { margin-bottom: 12px; }
+#page-settings .card:last-child { margin-bottom: 0; }
+
+.card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  margin-bottom: 14px;
+}
+.card-title-icon { width: 16px; height: 16px; color: var(--primary); opacity: 0.8; flex-shrink: 0; }
+
+/* Field row */
+.field-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.field-row:last-child { margin-bottom: 0; }
+.field-label {
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  min-width: 60px; text-align: right; flex-shrink: 0;
+}
+
+/* ============================================================
+   Inputs
+   ============================================================ */
+input[type="text"],
+input[type="number"],
+select {
+  background: var(--bg-input); border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-sm); padding: 7px 11px;
+  color: var(--text); font-size: 13px; font-family: var(--font);
+  outline: none; min-height: 34px; text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(123, 131, 196, 0.12);
+}
+.path-input {
+  flex: 1; color: var(--text-secondary) !important;
+  background: var(--bg) !important; cursor: default;
+}
+.path-input::placeholder { color: var(--text-muted); }
+
+select {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%239498b8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  padding-right: 28px;
+}
+input[type="number"] { font-variant-numeric: tabular-nums; }
+
+/* Checkbox */
+.checkbox-label {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 13px; color: var(--text); white-space: nowrap;
+}
+.checkbox-label input[type="checkbox"] { display: none; }
+.checkbox-label input[type="checkbox"] + span {
+  width: 18px; height: 18px; min-width: 18px;
+  border: 2px solid var(--border-input); border-radius: 4px;
+  background: var(--bg-input); transition: all 0.15s;
+}
+.checkbox-label input[type="checkbox"]:checked + span {
+  background: var(--primary); border-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.3 4.3L6 11.6 2.7 8.3l1.4-1.4L6 8.8l5.9-5.9z'/%3E%3C/svg%3E");
+  background-size: 12px; background-position: center; background-repeat: no-repeat;
+}
+
+/* Buttons */
+button {
+  font-family: var(--font); cursor: pointer; border: none;
+  border-radius: var(--radius-sm); padding: 8px 18px;
+  font-size: 13px; font-weight: 500; color: var(--text);
+  background: var(--bg-input); transition: all 0.15s;
+}
+button:hover { background: var(--bg-hover); }
+button:active { background: var(--bg-active); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.browse-btn {
+  background: var(--bg-input); border: 1.5px solid var(--border-input);
+  color: var(--text-secondary); font-weight: 500; white-space: nowrap;
+  flex-shrink: 0;
+}
+.browse-btn:hover { border-color: var(--border-focus); color: var(--text); }
+
+.primary-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--primary) !important; color: #fff !important;
+  padding: 10px 28px !important; font-size: 14px !important; font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(240, 107, 157, 0.25);
+}
+.primary-btn:hover { background: var(--primary-hover) !important; }
+.primary-btn:active { background: var(--primary-active) !important; }
+.primary-btn:disabled { background: var(--bg-input) !important; color: var(--text-muted) !important; box-shadow: none; }
+
+.secondary-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: transparent !important; color: var(--danger) !important;
+  border: 1.5px solid var(--danger) !important;
+  padding: 10px 24px !important; font-size: 14px !important; font-weight: 600 !important;
+}
+.secondary-btn:hover { background: var(--danger-bg) !important; }
+.secondary-btn:active { background: var(--danger) !important; color: #fff !important; }
+.secondary-btn:disabled { border-color: var(--border-light) !important; color: var(--text-muted) !important; }
+
+.start-btn { flex: 3; }
+.stop-btn { flex: 1; }
+#actionRow.rendering .start-btn { flex: 1; }
+#actionRow.rendering .stop-btn { flex: 1; }
+
+.danger-btn-text { background: transparent; color: var(--danger); font-weight: 500; }
+.danger-btn-text:hover { background: var(--danger-bg); }
+
+.link-btn {
+  width: 28px; height: 28px; min-width: 28px; padding: 4px;
+  background: transparent; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.link-btn:hover { background: var(--bg-hover); color: var(--text); }
+.link-btn.locked { background: var(--primary-bg); color: var(--primary); }
+.link-icon-svg { width: 14px; height: 14px; pointer-events: none; }
+.btn-icon { width: 18px; height: 18px; }
+
+/* ============================================================
+   Home — Render Settings (2-column)
+   ============================================================ */
+.render-grid {
+  display: flex; gap: 32px;
+}
+.render-col:first-child { flex: 1; }
+.render-col-toggles { display: flex; flex-direction: row; align-items: center; gap: 24px; }
+
+.section-label {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  margin-bottom: 6px;
+}
+
+.param-inline { display: flex; gap: 14px; align-items: flex-end; }
+.param-item { display: flex; flex-direction: column; gap: 4px; }
+.param-label {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.param-value-row { display: flex; align-items: center; gap: 5px; }
+.param-sep { font-size: 14px; color: var(--text-muted); font-weight: 300; }
+.param-item input[type="number"] { width: 80px; }
+.param-item select { width: 126px; }
+
+/* ============================================================
+   Status
+   ============================================================ */
+.status-card { padding: 12px 22px; }
+.status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 3px; }
+.status-row progress {
+  flex: 1; height: 6px; border-radius: 3px;
+  background: var(--bg-input); border: none; overflow: hidden;
+}
+.status-row progress::-webkit-progress-bar { background: var(--bg-input); border-radius: 3px; }
+.status-row progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 3px; transition: width 0.3s ease;
+}
+.progress-pct {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; min-width: 36px; text-align: right;
+}
+.status-text { font-size: 12px; color: var(--text-muted); }
+
+/* ============================================================
+   Action row
+   ============================================================ */
+.action-row { display: flex; gap: 12px; flex-shrink: 0; }
+
+/* ============================================================
+   Settings — form rows fill full width, right buttons aligned
+   ============================================================ */
+.form-list { display: flex; flex-direction: column; gap: 10px; }
+
+.form-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.form-label {
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  min-width: 100px; text-align: right; flex-shrink: 0;
+}
+
+/* Settings inputs/selects: fill remaining space, with max-width to leave room for buttons */
+.form-row > input[type="number"],
+.form-row > select {
+  flex: 1; max-width: none;
+}
+.form-row > .path-input { flex: 1; max-width: none; }
+.form-row > .browse-btn { margin-left: auto; }
+/* Config Change + Export Log buttons align to right */
+.form-row > .mono-text { flex: 1; }
+.form-row > .hint { flex: 0 0 auto; margin-left: auto; }
+
+/* Hint */
+.hint { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.mono-text {
+  color: var(--text-muted); font-size: 12px; font-family: var(--font-mono);
+  word-break: break-all; min-width: 0;
+}

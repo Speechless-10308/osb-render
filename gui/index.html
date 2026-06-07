@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSBoard</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<div id="app">
+  <div id="body">
+    <!-- ============================================================
+         Sidebar
+         ============================================================ -->
+    <nav id="sidebar">
+      <div class="sidebar-top">
+        <button class="sidebar-hamburger" id="hamburgerBtn" title="Toggle Sidebar">
+          <img src="../icons/icon_menu.png" class="hamburger-icon" alt="menu">
+        </button>
+        <div class="sidebar-logo">
+          <img src="../logo.png" alt="Logo" onerror="this.style.display='none'">
+          <span class="sidebar-brand">OSBoard</span>
+        </div>
+        <div class="sep"></div>
+      </div>
+      <button class="nav-btn active" data-page="home">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="label">Home</span>
+      </button>
+      <button class="nav-btn" data-page="settings">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="label">Settings</span>
+      </button>
+      <button class="nav-btn" data-page="about">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span class="label">About</span>
+      </button>
+      <div class="flex-spacer"></div>
+      <button class="nav-btn theme-btn" id="themeBtn" title="Toggle Theme">
+        <svg class="nav-icon-svg" id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="nav-icon-svg" id="themeIconLight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span class="label">Theme</span>
+      </button>
+    </nav>
+
+    <!-- ============================================================
+         Content
+         ============================================================ -->
+    <main id="content">
+      <!-- HOME -->
+      <div class="page active" id="page-home">
+        <div class="card">
+          <div class="card-title">
+            <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            File Source
+          </div>
+          <div class="field-row">
+            <span class="field-label">Beatmap</span>
+            <input type="text" class="path-input" id="osuPath" placeholder="Select .osu file..." readonly>
+            <button class="browse-btn" id="browseOsuBtn">Browse</button>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Output</span>
+            <input type="text" class="path-input" id="outputPath" placeholder="Output .mp4 path..." readonly>
+            <button class="browse-btn" id="browseOutBtn">Save As</button>
+          </div>
+        </div>
+
+        <!-- Render Settings — Video left, Options right -->
+        <div class="card">
+          <div class="card-title">
+            <svg class="card-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Render Settings
+          </div>
+          <div class="render-grid">
+            <div class="render-col">
+              <div class="section-label">Video</div>
+              <div class="param-inline">
+                <div class="param-item">
+                  <span class="param-label">Resolution</span>
+                  <div class="param-value-row">
+                    <input type="number" id="resWidth" value="1920" min="100" max="7680">
+                    <span class="param-sep">×</span>
+                    <input type="number" id="resHeight" value="1080" min="100" max="4320">
+                    <button class="link-btn locked" id="linkBtn" title="Lock Aspect Ratio">
+                      <svg class="link-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="param-item">
+                  <span class="param-label">FPS</span>
+                  <input type="number" id="fpsSpin" value="60" min="1" max="999">
+                </div>
+              </div>
+            </div>
+            <div class="render-col render-col-toggles">
+              <label class="checkbox-label">
+                <input type="checkbox" id="gpuCheck" checked>
+                <span></span>
+                GPU Acceleration
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="audioCheckHome" checked>
+                <span></span>
+                Merge Audio
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress + Status -->
+        <div class="card status-card">
+          <div class="status-row">
+            <progress id="progressBar" value="0" max="100"></progress>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <div class="status-text" id="statusText">Ready</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-row" id="actionRow">
+          <button class="primary-btn start-btn" id="startBtn">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            Start Rendering
+          </button>
+          <button class="secondary-btn stop-btn" id="stopBtn" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            Stop
+          </button>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SETTINGS
+           ============================================================ -->
+      <div class="page" id="page-settings">
+        <h1 class="page-title">Settings</h1>
+
+        <div class="card">
+          <div class="card-title">FFmpeg</div>
+          <div class="form-list">
+            <div class="form-row">
+              <span class="form-label">Path</span>
+              <input type="text" class="path-input" id="ffmpegPath" placeholder="Auto-detect from PATH or bundled ffmpeg...">
+              <button class="browse-btn" id="browseFfmpegBtn">Browse</button>
+            </div>
+          </div>
+          <div class="hint" id="ffmpegDisplay" style="margin-top:8px"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Encoding</div>
+          <div class="form-list">
+            <div class="form-row">
+              <span class="form-label">Preset</span>
+              <select id="setPreset"><option>ultrafast</option><option>superfast</option><option>veryfast</option><option>faster</option><option>fast</option><option>medium</option><option>slow</option><option>slower</option><option>veryslow</option></select>
+            </div>
+            <div class="form-row">
+              <span class="form-label">CRF</span>
+              <input type="number" id="setCrf" min="0" max="51" title="0=lossless, 23=default, 51=worst">
+            </div>
+            <div class="form-row">
+              <span class="form-label">Sampling</span>
+              <select id="setSample"><option>linear</option><option>nearest</option></select>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Pixel Format</span>
+              <select id="setPixFmt"><option>yuv420p</option><option>yuv444p</option><option>yuv422p</option><option>rgb24</option></select>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Tuning</span>
+              <select id="setTuning"><option>default</option><option>film</option><option>animation</option><option>grain</option><option>stillimage</option><option>psnr</option><option>ssim</option></select>
+            </div>
+            <div class="form-row">
+              <span class="form-label">GOP Size</span>
+              <input type="number" id="setGop" min="1" max="600">
+            </div>
+            <div class="form-row">
+              <span class="form-label">B-Frames</span>
+              <input type="number" id="setBframes" min="0" max="16">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Audio</div>
+          <div class="form-list">
+            <div class="form-row">
+              <span class="form-label">&nbsp;</span>
+              <label class="checkbox-label">
+                <input type="checkbox" id="audioEnable" checked>
+                <span></span>
+                Merge audio into output video
+              </label>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Codec</span>
+              <select id="audioCodec"><option>aac</option><option>mp3</option><option>opus</option><option>flac</option><option>copy</option></select>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Bitrate</span>
+              <select id="audioBitrate"><option>96k</option><option>128k</option><option>160k</option><option selected>192k</option><option>256k</option><option>320k</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Data</div>
+          <div class="form-list">
+            <div class="form-row">
+              <span class="form-label">Log</span>
+              <span class="hint" id="logStatus" style="flex:1;margin:0">No log data yet</span>
+              <button class="browse-btn" id="exportLogBtn">Export Log</button>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Config</span>
+              <span class="mono-text" id="configPathDisplay"></span>
+              <button class="browse-btn" id="changeConfigDirBtn">Change</button>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px">
+            <button class="danger-btn-text" id="resetDefaultsBtn">Reset to Defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           ABOUT
+           ============================================================ -->
+      <div class="page" id="page-about">
+        <div class="about-wrap">
+          <img class="about-logo" src="../logo.png" alt="OSBoard Logo" onerror="this.style.display='none'">
+          <div class="about-name">OSBoard</div>
+          <div class="about-version">v0.1.0</div>
+          <div class="about-divider"></div>
+          <p class="about-desc">
+            High-performance osu! storyboard renderer.
+            GPU-accelerated via Skia Graphics.
+          </p>
+          <p class="about-footnote">pywebview &middot; Skia &middot; FFmpeg &middot; MIT</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

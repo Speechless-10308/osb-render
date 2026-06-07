@@ -58,6 +58,12 @@ def main():
     parser.add_argument(
         "--gpu", action="store_true", help="Use GPU acceleration for rendering."
     )
+    parser.add_argument(
+        "--ffmpeg",
+        type=str,
+        default=None,
+        help="Path to ffmpeg executable. Overrides config if set.",
+    )
     args = parser.parse_args()
 
     config = Config.from_yaml(args.config)
@@ -76,6 +82,8 @@ def main():
         config.renderer.use_gpu = True
     else:
         config.renderer.use_gpu = False
+    if args.ffmpeg:
+        config.renderer.ffmpeg_path = args.ffmpeg
 
     job = RenderJob(config)
 

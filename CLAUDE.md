@@ -14,6 +14,9 @@ uv run main.py [osu_path] -o [output_path] --width 1920 --height 1080
 # Run CLI (GPU acceleration)
 uv run main.py [osu_path] -o [output_path] --width 1920 --height 1080 --gpu
 
+# Run CLI with custom ffmpeg path
+uv run main.py [osu_path] -o [output_path] --ffmpeg "C:\ffmpeg\ffmpeg.exe"
+
 # Run GUI
 uv run app.py
 
@@ -30,7 +33,7 @@ uv run tests/benchmark.py                              # CPU, 1920x1080 @ 60 fps
 uv run tests/benchmark.py --gpu --width 1280 --height 720 --fps 30
 
 # Build with Nuitka
-uv run nuitka app.py --standalone --enable-plugin=pyside6 --windows-console-mode=disable --include-data-dir=icons=icons --include-data-dir=themes=themes
+uv run nuitka app.py --standalone --windows-console-mode=disable --include-data-dir=gui=gui --include-data-dir=icons=icons --include-data-dir=configs=configs
 ```
 
 Python 3.13 via uv. Tests use pytest; demo scripts live in `scripts/`.
@@ -51,25 +54,22 @@ This app renders osu! storyboard files into video. The rendering pipeline: **.os
 - **[src/managers.py](src/managers.py)** — `AssetLoader` caches loaded images by path, returns a transparent 1x1 placeholder for missing assets
 - **[src/jobs.py](src/jobs.py)** — `RenderJob` orchestrates the full render: parses `.osu` first, then merges `.osb` on top, creates `VideoSource` if a video event is present, creates ffmpeg subprocess, feeds raw frames via stdin pipe. CPU path uses `multiprocessing.Pool` with worker processes (each worker gets its own `VideoSource`); GPU path renders frames sequentially. After rendering, merges audio via ffmpeg.
 
-### GUI (`apps/`)
+### GUI (`apps/` + `gui/`)
 
-- **[apps/main_window.py](apps/main_window.py)** — `MainWindow` orchestrator: frameless window with drop shadow, custom title bar, animated collapsible sidebar, QStackedWidget pages, render lifecycle, theme switching. Window drag and resize via CustomGrips.
-- **[apps/title_bar.py](apps/title_bar.py)** — `TitleBar(QFrame)` — custom title bar with sidebar toggle (hamburger), logo, title, theme toggle button, and window control buttons (minimize/maximize/close). Handles window dragging and double-click maximize.
-- **[apps/sidebar.py](apps/sidebar.py)** — `Sidebar(QFrame)` — collapsible left nav (200px ↔ 60px animated). 3 checkable page buttons (Home/Settings/About) in exclusive QButtonGroup. Emits `page_changed(int)` and `toggled(bool)`. QSS property `collapsed` controls icon-only mode.
-- **[apps/custom_grips.py](apps/custom_grips.py)** — `CustomGrip(QWidget)` — invisible edge resize handles for frameless window (ported from PyDracula, MIT).
-- **[apps/threads.py](apps/threads.py)** — `RenderThread` (QThread) runs `RenderJob` in background, bridges progress/log signals to GUI
-- **[apps/widgets.py](apps/widgets.py)** — `ResolutionWidget` with aspect-ratio-locked width/height spinboxes. All objectNames set for QSS targeting; no inline styles.
-- **[apps/pages/](apps/pages/)** — Page classes for the stacked widget:
-  - `home_page.py` — `HomePage`: 3-card layout (File Source, Parameters grid, Execution Monitor with collapsible console drawer). Console auto-expands on ERROR/WARNING logs.
-  - `settings_page.py` — `SettingsPage` with cards: FFmpeg Encoding (preset, CRF, sampling, pixel format, tuning, GOP, B-frames), Audio (codec, bitrate), Configuration (path changer, reset defaults). Auto-saves on any widget change.
-  - `about_page.py` — `AboutPage`: logo, version, project description, credits (static content)
+The GUI uses **pywebview** (system WebView2 on Windows) with an HTML/CSS/JS frontend. No Qt dependency.
 
-### Theming (`themes/`)
+- **[apps/web_gui.py](apps/web_gui.py)** — `WebGUI` creates a frameless pywebview window, loads `gui/index.html`, and manages the render lifecycle. `GuiAPI` class exposes Python methods to JavaScript via `pywebview.api.*`. `RenderThread` (plain `threading.Thread`) runs `RenderJob` in background and posts progress/log events to a thread-safe queue; the JS frontend polls `pywebview.api.poll_events()` on a ~100ms timer.
+- **[gui/index.html](gui/index.html)** — Single-page application: custom title bar (drag via `-webkit-app-region`), collapsible animated sidebar (CSS transition), 3 pages (Home/Settings/About) toggled via JS. Three cards on Home: File Source, Parameters (resolution with aspect-ratio lock, FPS, GPU toggle, encoder preset, CRF), Execution Monitor (progress bar + coloured console log).
+- **[gui/css/base.css](gui/css/base.css)** — CSS custom properties for dark/light themes (toggled via `[data-theme]` attribute), layout styles, sidebar, title bar.
+- **[gui/css/components.css](gui/css/components.css)** — Component styles: cards, form inputs, buttons (primary/secondary/browse/link), progress bar, console log.
+- **[gui/js/app.js](gui/js/app.js)** — Application logic: navigation, theme toggle, window controls, file dialogs via `pywebview.api`, aspect-ratio lock, render lifecycle, event polling, settings auto-save (500ms debounce).
 
-- **[themes/osboard_dark.qss](themes/osboard_dark.qss)** — Dark Dracula-based QSS theme. All styling via objectName selectors.
-- **[themes/osboard_light.qss](themes/osboard_light.qss)** — Light theme: Background `#F8F9FA`, Cards `#FFFFFF`, Primary `#FF66AA`, Text `#2E354F`, Accent `#9D72FF`.
-- Runtime theme switching via title bar button. Preference persisted in `Config.app.theme`.
-- Zero inline `setStyleSheet()` calls in Python.
+### Theming
+
+- CSS custom properties on `:root` and `[data-theme="light"]` drive all colours.
+- Dark theme (default): Dracula-based (`#1a1b26` bg, `#ff66aa` primary, `#bd93f9` accent).
+- Light theme: `#F8F9FA` bg, `#FFFFFF` cards, same primary/accent.
+- Theme preference persisted in `Config.app.theme`. JS toggles `document.documentElement.dataset.theme`.
 
 ### Tests (`tests/`)
 
@@ -98,9 +98,9 @@ Standalone scripts for manual testing and visual debugging (run directly, not vi
 
 ### Entry points
 
-- **[main.py](main.py)** — CLI with argparse, creates `Config` from YAML + CLI overrides, runs `RenderJob` with tqdm progress bar
-- **[app.py](app.py)** — PySide6 QApplication bootstrap, loads initial QSS theme, creates `MainWindow`
-- **[pyproject.toml](pyproject.toml)** — Project metadata, depends on glfw, loguru, nuitka, pydantic, pyside6, pyyaml, skia-python, tqdm. Python >=3.13.
+- **[main.py](main.py)** — CLI with argparse, creates `Config` from YAML + CLI overrides, runs `RenderJob` with tqdm progress bar. Supports `--ffmpeg` flag for custom ffmpeg path.
+- **[app.py](app.py)** — pywebview bootstrap, creates `WebGUI` window
+- **[pyproject.toml](pyproject.toml)** — Project metadata, depends on glfw, loguru, nuitka, pydantic, pywebview, pyyaml, skia-python, tqdm. Python >=3.13.
 
 ### Other
 
@@ -110,7 +110,8 @@ Standalone scripts for manual testing and visual debugging (run directly, not vi
 
 ## Key design notes
 
-- **Frameless window**: Uses `Qt.FramelessWindowHint` + `Qt.WA_TranslucentBackground`. Custom title bar handles dragging and window controls. `QGraphicsDropShadowEffect` on `#bgApp` provides the shadow. `CustomGrip` widgets on all 4 edges handle resizing.
+- **Frameless window**: Uses pywebview's `frameless=True`. Custom title bar via CSS `-webkit-app-region: drag` on `#titleBar`, with `no-drag` on buttons. Window controls (min/max/close) call `pywebview.api.*` methods. Sidebar collapse animated via CSS `transition: width 0.4s`.
+- **ffmpeg path**: Configurable via `Config.renderer.ffmpeg_path`. Empty = auto-detect: custom path first, then bundled `ffmpeg.exe` in project root, then `PATH`. `_resolve_ffmpeg(cfg)` in `src/jobs.py` handles resolution. CLI: `--ffmpeg` flag. GUI: Settings page file picker.
 - **.osu + .osb merge order**: `.osu` `[Events]` are parsed first, then `.osb` is merged on top. Within each layer, `.osu` objects come first (rendered behind), `.osb` objects are appended after (rendered on top). Layer hierarchy (Background < Fail < Pass < Foreground < Overlay) is preserved across both files.
 - The renderer uses a **time-bucketing optimization**: objects are pre-bucketed into 1-second intervals so each frame only iterates active objects
 - osu! uses a 640x480 coordinate system; the renderer scales to output resolution using `height / 480.0` as the scale factor, centering horizontally with an x-offset

@@ -17,6 +17,34 @@ import numpy as np
 from src.video import VideoSource
 from src.models import VideoObject
 
+
+def _resolve_ffmpeg(cfg: Config) -> str:
+    """Return the ffmpeg path from config, or fall back to bundled / PATH."""
+    path = cfg.renderer.ffmpeg_path
+    if path and os.path.isfile(path):
+        return path
+    # Fallback: bundled ffmpeg in the project root
+    bundled = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
+    )
+    if os.path.isfile(bundled):
+        return bundled
+    return "ffmpeg"  # last resort: PATH
+
+
+def _resolve_ffmpeg_static(ffmpeg_path: str = "") -> str:
+    """Static variant for use in module-level init_worker where we can't pass Config."""
+    if ffmpeg_path and os.path.isfile(ffmpeg_path):
+        return ffmpeg_path
+    bundled = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
+    )
+    if os.path.isfile(bundled):
+        return bundled
+    return "ffmpeg"
+
 # Multiprocessing needs these at module level to be picklable, but who use cpu models anyway?
 worker_renderer: Optional[SkiaRenderer] = None
 
@@ -28,16 +56,14 @@ def init_worker(
     height: int,
     video_path: str | None = None,
     video_object: VideoObject | None = None,
+    ffmpeg_path: str = "",
 ):
     global worker_renderer
     assets_loader = AssetLoader(base_path=asset_path)
     video_source = None
     if video_path and os.path.isfile(video_path):
-        ffmpeg = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
-        )
-        video_source = VideoSource(video_path, ffmpeg_path=ffmpeg)
+        resolved = _resolve_ffmpeg_static(ffmpeg_path or "")
+        video_source = VideoSource(video_path, ffmpeg_path=resolved)
     worker_renderer = SkiaRenderer(
         engine,
         assets_loader,
@@ -131,8 +157,9 @@ class RenderJob:
         return max_time
 
     def _build_ffmpeg_command(self) -> List[str]:
+        ffmpeg = _resolve_ffmpeg(self.cfg)
         ffmpeg_cmd = [
-            "ffmpeg",
+            ffmpeg,
             "-y",
             "-hide_banner",
             "-loglevel",
@@ -204,11 +231,8 @@ class RenderJob:
             video_path = os.path.join(
                 self.base_path, storyboard.video.filepath
             )
-            ffmpeg_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
-            )
-            self._video_source = VideoSource(video_path, ffmpeg_path=ffmpeg_path)
+            resolved = _resolve_ffmpeg(self.cfg)
+            self._video_source = VideoSource(video_path, ffmpeg_path=resolved)
             if not self._video_source.is_valid:
                 self.log_callback(
                     f"Failed to load video: {video_path}", "WARNING"
@@ -299,6 +323,7 @@ class RenderJob:
 
         vo = engine.storyboard.video
         video_path = os.path.join(self.base_path, vo.filepath) if vo else None
+        resolved_ffmpeg = _resolve_ffmpeg(self.cfg)
 
         with multiprocessing.Pool(
             processes=cpu_count,
@@ -310,6 +335,7 @@ class RenderJob:
                 self.cfg.renderer.height,
                 video_path,
                 vo,
+                resolved_ffmpeg,
             ),
         ) as pool:
             result_iter = pool.imap(render_frame_worker, tasks, chunksize=10)
@@ -337,8 +363,9 @@ class RenderJob:
             if os.path.exists(output):
                 os.rename(output, temp_output)
 
+            ffmpeg = _resolve_ffmpeg(self.cfg)
             ffmpeg_cmd = [
-                "ffmpeg",
+                ffmpeg,
                 "-y",
                 "-i",
                 temp_output,

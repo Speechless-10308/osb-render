@@ -1,0 +1,188 @@
+/* ============================================================
+   OSBoard — Base & Layout
+   ============================================================ */
+
+:root {
+  --bg: #0c0d16;
+  --bg-card: #131522;
+  --bg-input: #181b2c;
+  --bg-hover: #1c2034;
+  --bg-active: #222741;
+  --bg-sidebar: #0e0f1a;
+
+  --text: #e2e4f2;
+  --text-secondary: #9498b8;
+  --text-muted: #5d6180;
+
+  --primary: #f06b9d;
+  --primary-hover: #f381ae;
+  --primary-active: #e0558a;
+  --primary-bg: rgba(240, 107, 157, 0.10);
+
+  --danger: #ef5350;
+  --danger-bg: rgba(239, 83, 80, 0.10);
+
+  --accent: #bca3e8;
+
+  --border: #1c1f32;
+  --border-light: #282c45;
+  --border-input: #2b2f48;
+  --border-focus: #7b83c4;
+
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.22);
+
+  --radius: 9px;
+  --radius-sm: 6px;
+
+  --sidebar-w: 210px;
+  --sidebar-collapsed-w: 48px;
+
+  --font: "Segoe UI", -apple-system, system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+}
+
+[data-theme="light"] {
+  --bg: #edf0f7;
+  --bg-card: #f9fafd;
+  --bg-input: #f0f2f9;
+  --bg-hover: #e7eaf5;
+  --bg-active: #dde1f0;
+  --bg-sidebar: #e2e4f0;
+
+  --text: #1c2040;
+  --text-secondary: #5e6288;
+  --text-muted: #9599be;
+
+  --primary: #d94d80;
+  --primary-hover: #e06895;
+  --primary-active: #c04070;
+  --primary-bg: rgba(217, 77, 128, 0.08);
+
+  --danger: #cc3a3a;
+  --danger-bg: rgba(204, 58, 58, 0.08);
+
+  --accent: #7250b8;
+
+  --border: #d6d9ec;
+  --border-light: #e4e7f6;
+  --border-input: #c6cae4;
+  --border-focus: #6c74b0;
+
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: var(--font); font-size: 13px; line-height: 1.5;
+  color: var(--text); background: var(--bg);
+  -webkit-user-select: none; user-select: none;
+}
+
+#app { height: 100vh; }
+#body { display: flex; height: 100%; }
+
+/* ============================================================
+   Sidebar — overflow:hidden clips text as width shrinks
+   ============================================================ */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-collapsed-w);
+  background: var(--bg-sidebar); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 0 0 8px;
+  transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;   /* clips content — text gets covered by the right edge */
+}
+#sidebar.collapsed { width: var(--sidebar-collapsed-w); }
+
+.sidebar-top { flex-shrink: 0; }
+
+.sidebar-hamburger {
+  display: flex; align-items: center;
+  width: 100%; height: 40px;
+  padding: 0 14px; margin: 8px 0 4px;
+  border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+}
+.sidebar-hamburger:hover { background: var(--bg-hover); color: var(--text); }
+.hamburger-icon { width: 18px; height: 18px; opacity: 0.7; flex-shrink: 0; }
+.sidebar-hamburger:hover .hamburger-icon { opacity: 1; }
+
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px 8px; white-space: nowrap;
+}
+.sidebar-logo img { width: 30px; height: 30px; border-radius: 6px; flex-shrink: 0; }
+.sidebar-brand { font-size: 15px; font-weight: 700; color: var(--primary); letter-spacing: -0.3px; }
+
+.sep { height: 1px; background: var(--border); margin: 4px 14px 8px; }
+
+/* Nav buttons — always same layout; text clipped by sidebar overflow */
+.nav-btn {
+  display: flex; align-items: center; gap: 10px;
+  height: 38px; flex-shrink: 0;
+  padding: 0 16px; margin: 1px 0;
+  border: none; border-radius: 0;
+  background: transparent; color: var(--text-secondary);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  white-space: nowrap; text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-btn:hover { background: var(--bg-hover); color: var(--text); }
+.nav-btn.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+
+.nav-icon-svg {
+  width: 20px; height: 20px; min-width: 20px; flex-shrink: 0;
+  opacity: 0.6; transition: opacity 0.15s;
+}
+.nav-btn:hover .nav-icon-svg,
+.nav-btn.active .nav-icon-svg { opacity: 1; }
+.nav-btn .label { overflow: hidden; }
+
+.flex-spacer { flex: 1; min-height: 0; }
+.theme-btn { margin-bottom: 4px; }
+
+/* ============================================================
+   Content
+   ============================================================ */
+#content {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 24px 32px; background: var(--bg);
+}
+.page { display: none; max-width: 780px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* Home: no scroll */
+#page-home { overflow: hidden; display: none; }
+#page-home.active { display: flex; flex-direction: column; height: 100%; gap: 12px; }
+
+/* Settings, About: scrollable if needed */
+#page-settings,
+#page-about { max-width: none; }
+
+/* About: fill entire content area */
+#page-about.active { display: flex; height: 100%; }
+#page-about .about-wrap {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-card);
+}
+.about-logo { width: 72px; height: 72px; border-radius: 14px; margin-bottom: 8px; }
+.about-name { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+.about-version { font-size: 13px; color: var(--text-muted); font-family: var(--font-mono); }
+.about-divider { width: 36px; height: 2px; background: var(--primary); border-radius: 1px; margin: 14px auto; opacity: 0.6; }
+.about-desc { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+.about-footnote { color: var(--text-muted); font-size: 12px; margin-top: 6px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+.page-title {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  margin-bottom: 16px; letter-spacing: -0.3px;
+}

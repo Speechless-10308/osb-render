@@ -7,6 +7,7 @@ renderer:
   crf: 20
   enable_audio: true
   encoder_preset: fast
+  ffmpeg_path: ""   # empty = auto-detect; set to custom ffmpeg.exe path
   fps: 60
   height: 720
   sample_method: linear
