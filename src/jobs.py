@@ -33,10 +33,7 @@ def init_worker(
     assets_loader = AssetLoader(base_path=asset_path)
     video_source = None
     if video_path and os.path.isfile(video_path):
-        ffmpeg = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
-        )
+        ffmpeg = get_ffmpeg_path()
         video_source = VideoSource(video_path, ffmpeg_path=ffmpeg)
     worker_renderer = SkiaRenderer(
         engine,
@@ -65,6 +62,62 @@ def get_audio_from_osu(osu_path: str) -> str:
     return ""
 
 
+def get_ffmpeg_path() -> str:
+    """Return the bundled ffmpeg path used by the renderer."""
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
+    )
+
+
+def probe_media_duration(media_path: str, ffmpeg_path: str) -> int:
+    """Read a media file's duration from ffmpeg's stream metadata.
+
+    ffmpeg writes the duration to stderr while probing an input.  Returning
+    zero on probe failures lets callers keep the storyboard duration as a
+    safe fallback.
+    """
+    if not os.path.isfile(media_path):
+        return 0
+
+    cmd = [
+        ffmpeg_path,
+        "-hide_banner",
+        "-nostats",
+        "-i",
+        media_path,
+        "-f",
+        "null",
+        os.devnull,
+    ]
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return 0
+
+    match = re.search(
+        r"Duration:\s*(\d+):(\d+):(\d+)\.(\d+)", result.stderr or ""
+    )
+    if not match:
+        return 0
+
+    hours, minutes, seconds, fraction = match.groups()
+    # ffmpeg normally prints centiseconds, but accepting any number of
+    # fractional digits makes this work with different ffmpeg builds.
+    milliseconds = int(fraction[:3].ljust(3, "0"))
+    return (
+        ((int(hours) * 60 + int(minutes)) * 60 + int(seconds)) * 1000
+        + milliseconds
+    )
+
+
 def log_message(message: str, level: str = "INFO"):
     if level == "INFO":
         logger.info(message)
@@ -84,8 +137,9 @@ class RenderJob:
         self.base_path: str = os.path.dirname(self.cfg.path.osu_path)
 
         osu_path = self.cfg.path.osu_path
-        self.audio_path: str = os.path.join(
-            self.base_path, get_audio_from_osu(osu_path)
+        audio_name = get_audio_from_osu(osu_path)
+        self.audio_path: str = (
+            os.path.join(self.base_path, audio_name) if audio_name else ""
         )
         # like "xx - x [xx].osu" => "xx - x.osb"
         filename = os.path.splitext(os.path.basename(osu_path))[0]
@@ -94,6 +148,7 @@ class RenderJob:
 
         self.progress_callback: Callable[[int, int], None] | None = None
         self.log_callback: Callable[[str, str], None] = log_message
+        self._video_source: VideoSource | None = None
 
     def set_callbacks(
         self,
@@ -128,7 +183,24 @@ class RenderJob:
             if video_end > max_time:
                 max_time = video_end
 
+        # The audio track may outlive the storyboard.  Keep rendering blank
+        # frames until the audio ends so that -shortest does not truncate it.
+        audio_duration = self._get_audio_duration()
+        if audio_duration > max_time:
+            max_time = audio_duration
+
         return max_time
+
+    def _get_audio_duration(self) -> int:
+        if not self.cfg.renderer.enable_audio or not self.audio_path:
+            return 0
+
+        duration = probe_media_duration(self.audio_path, get_ffmpeg_path())
+        if duration <= 0:
+            self.log_callback(
+                f"Failed to determine audio duration: {self.audio_path}", "WARNING"
+            )
+        return duration
 
     def _build_ffmpeg_command(self) -> List[str]:
         ffmpeg_cmd = [
@@ -199,15 +271,12 @@ class RenderJob:
             return
 
         # Initialise video source if the .osu defines a video event
-        self._video_source: VideoSource | None = None
+        self._video_source = None
         if storyboard.video is not None:
             video_path = os.path.join(
                 self.base_path, storyboard.video.filepath
             )
-            ffmpeg_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "ffmpeg.exe" if os.name == "nt" else "ffmpeg",
-            )
+            ffmpeg_path = get_ffmpeg_path()
             self._video_source = VideoSource(video_path, ffmpeg_path=ffmpeg_path)
             if not self._video_source.is_valid:
                 self.log_callback(
