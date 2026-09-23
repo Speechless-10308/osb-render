@@ -5,8 +5,66 @@ from PySide6.QtWidgets import (
     QLabel,
     QSpinBox,
     QToolButton,
+    QCheckBox,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize, QRectF
+from PySide6.QtGui import QColor, QPainter
+
+
+class ToggleSwitch(QCheckBox):
+    """A compact accessible checkbox painted as a modern sliding switch."""
+
+    def __init__(self, text: str = "", parent=None):
+        super().__init__(text, parent)
+        self._dark_mode = True
+        self.setCursor(Qt.PointingHandCursor)
+        self.setMinimumHeight(28)
+
+    def set_theme(self, dark_mode: bool) -> None:
+        self._dark_mode = dark_mode
+        self.update()
+
+    def sizeHint(self) -> QSize:
+        text_width = self.fontMetrics().horizontalAdvance(self.text()) if self.text() else 0
+        return QSize(48 + text_width, 28)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        enabled = self.isEnabled()
+        checked = self.isChecked()
+
+        track_width, track_height = 38.0, 22.0
+        track_x = 0.0
+        track_y = (self.height() - track_height) / 2
+        if checked:
+            track = QColor("#ff5c9e" if self._dark_mode else "#e84f91")
+        else:
+            track = QColor("#3a414d" if self._dark_mode else "#c7ced8")
+        if not enabled:
+            track.setAlpha(120)
+
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(track)
+        painter.drawRoundedRect(
+            QRectF(track_x, track_y, track_width, track_height), 11, 11
+        )
+
+        knob_diameter = 16.0
+        knob_margin = 3.0
+        knob_x = (track_width - knob_diameter - knob_margin) if checked else knob_margin
+        knob_y = track_y + knob_margin
+        painter.setBrush(QColor("#ffffff" if enabled else "#c8cbd1"))
+        painter.drawEllipse(QRectF(knob_x, knob_y, knob_diameter, knob_diameter))
+
+        if self.text():
+            text_color = QColor("#f2f4f7" if self._dark_mode else "#28303b")
+            if not enabled:
+                text_color.setAlpha(130)
+            painter.setPen(text_color)
+            text_rect = self.rect().adjusted(48, 0, 0, 0)
+            painter.drawText(text_rect, Qt.AlignVCenter | Qt.AlignLeft, self.text())
+        painter.end()
 
 
 class ResolutionWidget(QWidget):

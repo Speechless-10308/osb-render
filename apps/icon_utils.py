@@ -50,3 +50,21 @@ def make_muted_icon(name: str, dark_mode: bool) -> QIcon:
     """Tint icon to muted/sidebar accent color for the current theme."""
     color = QColor("#6272a4") if dark_mode else QColor("#7C829A")
     return load_and_tint(name, color)
+
+
+def make_nav_icon(name: str, dark_mode: bool) -> QIcon:
+    """Create a crisp navigation icon with a selected-state accent."""
+    normal = load_and_tint(
+        name, QColor("#dfe3e9") if dark_mode else QColor("#697586")
+    )
+    accent = load_and_tint(
+        name, QColor("#ff5c9e") if dark_mode else QColor("#e84f91")
+    )
+    icon = QIcon()
+    if not normal.isNull():
+        icon.addPixmap(normal.pixmap(20, 20), QIcon.Normal, QIcon.Off)
+    if not accent.isNull():
+        icon.addPixmap(accent.pixmap(20, 20), QIcon.Normal, QIcon.On)
+        icon.addPixmap(accent.pixmap(20, 20), QIcon.Active, QIcon.On)
+        icon.addPixmap(accent.pixmap(20, 20), QIcon.Selected, QIcon.On)
+    return icon

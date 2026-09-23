@@ -11,9 +11,9 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 from PySide6.QtGui import QIcon, QPixmap
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QSize
 
-from apps.icon_utils import icon_path, make_muted_icon, get_project_root
+from apps.icon_utils import icon_path, make_nav_icon, get_project_root
 
 
 class Sidebar(QFrame):
@@ -22,7 +22,7 @@ class Sidebar(QFrame):
     page_changed = Signal(int)
     toggled = Signal(bool)
 
-    SIDEBAR_EXPANDED = 220
+    SIDEBAR_EXPANDED = 184
     SIDEBAR_COLLAPSED = 60
 
     def __init__(self, parent=None):
@@ -73,18 +73,23 @@ class Sidebar(QFrame):
         self._btn_group = QButtonGroup(self)
         self._btn_group.setExclusive(True)
 
-        self.home_btn = self._create_nav_button("Home", "cil-home.png", 0)
-        self.settings_btn = self._create_nav_button("Settings", "cil-settings.png", 1)
-        self.about_btn = self._create_nav_button("About", "cil-description.png", 2)
+        self._nav_labels = {}
+        self.home_btn = self._create_nav_button("Home", "nav-home.svg", 0)
+        self.settings_btn = self._create_nav_button("Settings", "nav-settings.svg", 1)
+        self.about_btn = self._create_nav_button("About", "nav-about.svg", 2)
 
         layout.addWidget(self.home_btn)
         layout.addWidget(self.settings_btn)
         layout.addWidget(self.about_btn)
 
-        # Spacer pushes everything up
+        # Spacer pushes navigation up while keeping the version at the bottom.
         layout.addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
         )
+
+        self.version_label = QLabel("OSBoard v0.1.1")
+        self.version_label.setObjectName("versionLabel")
+        layout.addWidget(self.version_label)
 
         self.home_btn.setChecked(True)
         self._btn_group.idClicked.connect(self.page_changed.emit)
@@ -93,10 +98,13 @@ class Sidebar(QFrame):
         btn = QPushButton(text)
         btn.setObjectName("sidebarBtn")
         btn.setCheckable(True)
+        btn.setIconSize(QSize(20, 20))
 
         p = icon_path(icon_name)
         if os.path.exists(p):
             btn.setIcon(QIcon(p))
+
+        self._nav_labels[btn] = text
 
         self._btn_group.addButton(btn, page_id)
         return btn
@@ -108,8 +116,16 @@ class Sidebar(QFrame):
         # Adjust brand row margins: centered logo when collapsed
         if self._expanded:
             self._brand_row.setContentsMargins(20, 8, 8, 8)
+            self.brand_label.setVisible(True)
+            self.version_label.setVisible(True)
+            for button, label in self._nav_labels.items():
+                button.setText(label)
         else:
             self._brand_row.setContentsMargins(10, 8, 10, 8)
+            self.brand_label.setVisible(False)
+            self.version_label.setVisible(False)
+            for button in self._nav_labels:
+                button.setText("")
 
         self.style().unpolish(self)
         self.style().polish(self)
@@ -117,12 +133,12 @@ class Sidebar(QFrame):
 
     def set_theme_icons(self, is_dark: bool) -> None:
         icon_map = {
-            self.home_btn: "cil-home.png",
-            self.settings_btn: "cil-settings.png",
-            self.about_btn: "cil-description.png",
+            self.home_btn: "nav-home.svg",
+            self.settings_btn: "nav-settings.svg",
+            self.about_btn: "nav-about.svg",
         }
         for btn, name in icon_map.items():
-            icon = make_muted_icon(name, is_dark)
+            icon = make_nav_icon(name, is_dark)
             if not icon.isNull():
                 btn.setIcon(icon)
 

@@ -252,6 +252,7 @@ class MainWindow(QMainWindow):
         self.title_bar.set_theme(is_dark)
         self.sidebar.set_theme_icons(is_dark)
         self.home_page.set_theme_icons(is_dark)
+        self.settings_page.set_theme(is_dark)
 
     # ------------------------------------------------------------------
     # Maximize / Restore
